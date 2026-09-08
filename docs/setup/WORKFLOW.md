@@ -148,6 +148,8 @@ git switch -c feat/T07-login
 
 </details>
 
+El CI valida automáticamente el nombre de las ramas. Una rama con un formato distinto no podrá superar todos los checks de la Pull Request.
+
 ---
 
 ## 3. Trabajar y hacer commits
