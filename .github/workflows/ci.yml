@@ -95,24 +95,6 @@ jobs:
     name: Media Worker
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:17-alpine
-
-        env:
-          POSTGRES_DB: after
-          POSTGRES_USER: after
-          POSTGRES_PASSWORD: after
-
-        ports:
-          - 5432:5432
-
-        options: >-
-          --health-cmd "pg_isready -U after -d after"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
     defaults:
       run:
         working-directory: media-worker
@@ -142,6 +124,18 @@ jobs:
       - name: Make Maven Wrapper executable
         run: chmod +x mvnw
 
+      - name: Prepare environment
+        working-directory: .
+        run: cp .env.example .env
+
+      - name: Start PostgreSQL and MinIO
+        working-directory: .
+        run: docker compose up -d --wait postgres minio
+
+      - name: Initialize MinIO
+        working-directory: .
+        run: docker compose run --rm minio-init
+
       - name: Run media worker tests
         run: ./mvnw test
 
@@ -150,10 +144,9 @@ jobs:
 
       - name: Verify FFmpeg
         run: docker run --rm --entrypoint ffmpeg after-media-worker-ci -version
-
+ 
       - name: Verify FFprobe
         run: docker run --rm --entrypoint ffprobe after-media-worker-ci -version
-
 
   compose:
     name: Docker Compose

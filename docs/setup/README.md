@@ -1,45 +1,49 @@
 # After — Preparación del entorno de desarrollo
 
-Esta guía explica cómo preparar un equipo desde cero para trabajar en After.
+Esta guía sirve para preparar un equipo desde cero y dejarlo listo para trabajar en **After**.
 
-Cuando completes todos los pasos deberías poder:
-
-- clonar el repositorio;
-- instalar las dependencias del frontend;
-- compilar el backend;
-- levantar la infraestructura local;
-- ejecutar el media worker;
-- empezar a trabajar con normalidad.
-
-> Esta documentación es temporal y está pensada para la preparación inicial del equipo de desarrollo.
+> Esta documentación es temporal y está pensada para el onboarding inicial del equipo.
 
 ---
 
-## 1. Requisitos
+## ✅ Al terminar deberías poder
 
-Necesitas tener instalado:
-
-- Git
-- Node.js 22
-- npm
-- JDK 21
-- Docker Desktop
-- Docker Compose
-
-No necesitas instalar:
-
-- Maven globalmente
-- FFmpeg globalmente
-- PostgreSQL localmente
-- MinIO localmente
-
-El proyecto se encarga de esas dependencias mediante Maven Wrapper y Docker.
+- Clonar el repositorio.
+- Instalar las dependencias del frontend.
+- Compilar y ejecutar el backend.
+- Levantar PostgreSQL y MinIO.
+- Ejecutar el Media Worker.
+- Ejecutar los tests.
+- Empezar a trabajar en una tarea del proyecto.
 
 ---
 
-## 2. Comprobar las herramientas instaladas
+## ⚡ Resumen rápido
 
-Abre una terminal y ejecuta:
+Necesitas:
+
+| Herramienta | Versión |
+|---|---:|
+| Git | 2.x |
+| Node.js | 22.x |
+| npm | 10.x o compatible |
+| Java JDK | 21 |
+| Docker | versión reciente |
+| Docker Compose | versión reciente |
+
+No necesitas instalar manualmente:
+
+- Maven
+- PostgreSQL
+- MinIO
+- FFmpeg
+- FFprobe
+
+---
+
+## 1. Comprobar qué tienes instalado
+
+Ejecuta:
 
 ```powershell
 git --version
@@ -51,44 +55,41 @@ docker --version
 docker compose version
 ```
 
-Las versiones principales esperadas son:
-
-```text
-Git             2.x
-Node.js         22.x
-npm             10.x o compatible
-Java            21
-Docker          versión reciente
-Docker Compose  versión reciente
-```
-
-No es necesario utilizar exactamente las mismas versiones menores.
+Si alguna herramienta falta, abre su sección correspondiente.
 
 ---
 
-## 3. Instalar Git
+<details>
+<summary><strong>2. Instalar Git</strong></summary>
 
-En Windows puedes instalarlo con Winget:
+<br>
+
+En Windows puedes instalar Git con:
 
 ```powershell
 winget install Git.Git
 ```
 
-Después comprueba:
+Después:
 
 ```powershell
 git --version
 ```
 
+También puedes instalarlo desde la web oficial de Git.
+
+</details>
+
 ---
 
-## 4. Instalar Node.js 22
+<details>
+<summary><strong>3. Instalar Node.js 22</strong></summary>
 
-After utiliza Node.js 22.
+<br>
 
-Instálalo desde la web oficial de Node.js o mediante el método que prefieras.
+After utiliza **Node.js 22**.
 
-Después:
+Después de instalarlo comprueba:
 
 ```powershell
 node -v
@@ -105,46 +106,49 @@ La versión de Node debería ser:
 
 No es obligatorio instalar Angular CLI globalmente.
 
-El proyecto utilizará la versión definida en sus propias dependencias.
+El frontend utilizará la versión instalada en las dependencias del propio proyecto.
 
-Si quieres tener disponible el comando `ng` globalmente:
+Si quieres disponer también de `ng` globalmente:
 
 ```powershell
 npm install -g @angular/cli@22
 ```
 
+</details>
+
 ---
 
-## 5. Instalar Java 21
+<details>
+<summary><strong>4. Instalar Java 21</strong></summary>
 
-After utiliza JDK 21.
+<br>
 
-En Windows recomendamos Eclipse Temurin.
+After utiliza **JDK 21**.
 
-Instálalo con:
+En Windows recomendamos Eclipse Temurin:
 
 ```powershell
 winget install EclipseAdoptium.Temurin.21.JDK
 ```
 
-Cuando termine, cierra la terminal y abre una nueva.
+Cuando termine:
 
-Comprueba:
+1. Cierra la terminal.
+2. Abre una nueva.
+3. Comprueba:
 
 ```powershell
 java -version
 javac -version
 ```
 
-Ambos deben mostrar Java 21.
+Ambos deberían mostrar Java 21.
 
----
+### Maven
 
-## 6. Maven
+No necesitas instalar Maven globalmente.
 
-No instales Maven globalmente.
-
-Tanto el backend como el media worker incluyen Maven Wrapper:
+Tanto `backend` como `media-worker` incluyen Maven Wrapper:
 
 ```text
 mvnw
@@ -152,25 +156,30 @@ mvnw.cmd
 .mvn/
 ```
 
-En Windows utilizaremos:
+En Windows:
 
 ```powershell
 .\mvnw.cmd
 ```
 
-En Linux o macOS:
+En Linux/macOS:
 
 ```bash
 ./mvnw
 ```
 
+</details>
+
 ---
 
-## 7. Instalar Docker
+<details>
+<summary><strong>5. Instalar Docker</strong></summary>
+
+<br>
 
 Instala Docker Desktop.
 
-En Windows debe funcionar con WSL2.
+En Windows debe funcionar utilizando WSL2.
 
 Comprueba:
 
@@ -179,21 +188,26 @@ docker --version
 docker compose version
 ```
 
-Para asegurarte de que Docker está funcionando realmente:
+Para verificar que el motor de Docker funciona:
 
 ```powershell
 docker run hello-world
 ```
 
+</details>
+
 ---
 
-## 8. IDE o editor
+<details>
+<summary><strong>6. VSCode y extensiones recomendadas</strong></summary>
 
-Puedes utilizar el editor que quieras.
+<br>
 
-After no depende de ninguna configuración exclusiva de VSCode, IntelliJ, Eclipse u otro IDE.
+After no depende de ningún IDE concreto.
 
-Si utilizas VSCode, se recomiendan estas extensiones:
+Aunque actualmente trabajemos con **VSCode**, el repositorio debe seguir siendo independiente del editor.
+
+Extensiones recomendadas:
 
 - Angular Language Service
 - ESLint
@@ -204,25 +218,22 @@ Si utilizas VSCode, se recomiendan estas extensiones:
 - Error Lens
 - REST Client
 
-Son opcionales.
+Son recomendaciones, no requisitos.
+
+No se versionarán configuraciones exclusivas de `.vscode/`.
+
+</details>
 
 ---
 
-## 9. Clonar el repositorio
-
-Clona After:
+## 7. Clonar el repositorio
 
 ```powershell
 git clone <URL_DEL_REPOSITORIO>
-```
-
-Entra en la carpeta:
-
-```powershell
 cd After
 ```
 
-La estructura principal debería ser parecida a:
+Estructura principal:
 
 ```text
 After/
@@ -230,42 +241,49 @@ After/
 ├── backend/
 ├── media-worker/
 ├── docs/
+├── .github/
 ├── docker-compose.yml
 ├── .env.example
-└── .editorconfig
+├── .editorconfig
+└── README.md
 ```
 
 ---
 
-## 10. Preparar variables de entorno
+## 8. Crear el entorno local
 
-Crea tu `.env` local a partir del ejemplo.
-
-En PowerShell:
+Desde la raíz:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-El archivo `.env` no debe subirse al repositorio.
+El archivo:
 
-Para desarrollo local, los valores incluidos en `.env.example` deberían ser suficientes salvo que necesites cambiar alguno.
+```text
+.env
+```
+
+es local y **no debe subirse al repositorio**.
 
 ---
 
-## 11. Levantar la infraestructura local
+## 9. Levantar infraestructura
 
-Desde la raíz del proyecto:
+Desde la raíz:
 
 ```powershell
 docker compose up -d
 ```
 
-Esto levantará actualmente:
+Actualmente Docker Compose prepara:
 
-- PostgreSQL
-- MinIO
-- Media Worker
+| Servicio | Función |
+|---|---|
+| PostgreSQL | Base de datos |
+| MinIO | Almacenamiento S3 compatible |
+| MinIO Init | Preparación inicial del bucket |
+| Media Worker | Worker multimedia |
 
 Comprueba:
 
@@ -273,13 +291,14 @@ Comprueba:
 docker compose ps
 ```
 
-`minio-init` puede aparecer como finalizado con código `0`.
-
-Eso es correcto. Su trabajo consiste en preparar MinIO y terminar.
+> `minio-init` puede aparecer terminado con código `0`. Es normal: realiza su trabajo y finaliza.
 
 ---
 
-## 12. Preparar el frontend
+<details>
+<summary><strong>10. Preparar el frontend</strong></summary>
+
+<br>
 
 Entra en:
 
@@ -287,7 +306,7 @@ Entra en:
 cd frontend
 ```
 
-Instala las dependencias:
+Instala dependencias:
 
 ```powershell
 npm install
@@ -299,21 +318,32 @@ Comprueba que compila:
 npm run build
 ```
 
-Para arrancarlo en desarrollo:
+Ejecuta los tests:
+
+```powershell
+npm test
+```
+
+Para desarrollo:
 
 ```powershell
 npm start
 ```
 
-Después vuelve a la raíz:
+Después:
 
 ```powershell
 cd ..
 ```
 
+</details>
+
 ---
 
-## 13. Preparar el backend
+<details>
+<summary><strong>11. Preparar el backend</strong></summary>
+
+<br>
 
 Entra en:
 
@@ -333,50 +363,57 @@ Para arrancar Spring Boot:
 .\mvnw.cmd spring-boot:run
 ```
 
-Después vuelve a la raíz:
+Después:
 
 ```powershell
 cd ..
 ```
 
+</details>
+
 ---
 
-## 14. Media Worker
+<details>
+<summary><strong>12. Media Worker</strong></summary>
 
-El media worker normalmente se ejecutará mediante Docker.
+<br>
 
-Su imagen incluye:
+El Media Worker normalmente se ejecutará mediante Docker.
+
+Su imagen contiene:
 
 - Java 21
 - FFmpeg
 - FFprobe
-- la aplicación del worker
+- la aplicación Spring Boot del worker
 
-No necesitas instalar FFmpeg en Windows.
+No necesitas instalar FFmpeg manualmente.
 
-Comprueba el estado:
+### Ver estado
 
 ```powershell
 docker compose ps
 ```
 
-Ver logs:
+### Ver logs
 
 ```powershell
 docker compose logs media-worker
 ```
 
-Si necesitas reconstruir la imagen:
+### Reconstruir la imagen
 
 ```powershell
 docker compose build media-worker
 ```
 
+</details>
+
 ---
 
-## 15. Comprobación final
+## 13. Comprobación final
 
-Comprueba:
+### Herramientas
 
 ```powershell
 git --version
@@ -388,50 +425,38 @@ docker --version
 docker compose version
 ```
 
-Y desde la raíz de After:
+### Infraestructura
 
 ```powershell
 docker compose up -d
+docker compose ps
 ```
 
-Frontend:
+### Frontend
 
 ```powershell
 cd frontend
 npm install
 npm run build
+cd ..
 ```
 
-Backend:
+### Backend
 
 ```powershell
-cd ../backend
+cd backend
 .\mvnw.cmd test
+cd ..
 ```
 
-Si todo funciona correctamente, el entorno está preparado.
+Si todo lo anterior funciona:
 
----
+> ✅ **Tu entorno está preparado para trabajar en After.**
 
-## 16. Flujo de trabajo
+El siguiente documento que debes leer es:
 
-Las tareas se gestionan mediante GitHub Projects.
+```text
+docs/setup/WORKFLOW.md
+```
 
-Cuando vayas a empezar:
-
-1. Busca la tarea `READY` con el número más bajo.
-2. Asígnatela.
-3. Muévela a `IN PROGRESS`.
-4. Crea una rama para esa tarea.
-5. Implementa y prueba los cambios.
-6. Abre una Pull Request.
-7. Mueve la tarea a `REVIEW`.
-8. Mientras espera revisión, coge la siguiente tarea disponible.
-
-Si la siguiente tarea numerada está bloqueada, coge la siguiente `READY` que no lo esté.
-
----
-
-## Entorno preparado
-
-Si has llegado hasta aquí, ya puedes empezar a trabajar en After.
+Ahí se explica cómo coger tareas, trabajar con ramas, crear Pull Requests y utilizar el CI.
