@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --no-watch --no-progress
+
+      - name: Build frontend
+        run: npm run build
+
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+
+        env:
+          POSTGRES_DB: after
+          POSTGRES_USER: after
+          POSTGRES_PASSWORD: after
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U after -d after"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/after
+      DB_USERNAME: after
+      DB_PASSWORD: after
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
+
+      - name: Run backend tests
+        run: ./mvnw test
+
+
+  media-worker:
+    name: Media Worker
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+
+        env:
+          POSTGRES_DB: after
+          POSTGRES_USER: after
+          POSTGRES_PASSWORD: after
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U after -d after"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: media-worker
+
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/after
+      DB_USERNAME: after
+      DB_PASSWORD: after
+
+      MINIO_ENDPOINT: http://localhost:9000
+      MINIO_ACCESS_KEY: after
+      MINIO_SECRET_KEY: after-minio-dev
+      MINIO_BUCKET: after-media
+      S3_REGION: us-east-1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
+
+      - name: Run media worker tests
+        run: ./mvnw test
+
+      - name: Build media worker image
+        run: docker build -t after-media-worker-ci .
+
+      - name: Verify FFmpeg
+        run: docker run --rm --entrypoint ffmpeg after-media-worker-ci -version
+
+      - name: Verify FFprobe
+        run: docker run --rm --entrypoint ffprobe after-media-worker-ci -version
+
+
+  compose:
+    name: Docker Compose
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Validate Docker Compose
+        run: docker compose config --quiet
