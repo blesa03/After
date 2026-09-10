@@ -1,0 +1,31 @@
+package com.after.backend.auth.infrastructure;
+
+import com.after.backend.auth.domain.RefreshToken;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public interface RefreshTokenRepository
+        extends JpaRepository<RefreshToken, UUID> {
+
+    Optional<RefreshToken> findByTokenHash(String tokenHash);
+
+    List<RefreshToken> findAllByUserId(UUID userId);
+
+    @Query("""
+            SELECT rt
+            FROM RefreshToken rt
+            WHERE rt.tokenHash = :tokenHash
+              AND rt.revokedAt IS NULL
+              AND rt.expiresAt > :now
+            """)
+    Optional<RefreshToken> findUsableByTokenHash(
+            @Param("tokenHash") String tokenHash,
+            @Param("now") Instant now
+    );
+}
