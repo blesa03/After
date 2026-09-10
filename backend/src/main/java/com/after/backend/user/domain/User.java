@@ -59,7 +59,7 @@ public class User {
         updatedAt = Instant.now();
     }
 
-    private static String normalizeEmail(String email) {
+    public static String normalizeEmail(String email) {
         String value = Objects.requireNonNull(email, "email cannot be null")
                 .trim()
                 .toLowerCase(Locale.ROOT);
