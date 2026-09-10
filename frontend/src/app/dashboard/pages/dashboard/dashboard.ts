@@ -1,9 +1,19 @@
-import { Component } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+} from '@angular/core';
+
+import { AuthService } from '../../../auth/services/auth.service';
 
 @Component({
-  imports: [],
   selector: 'app-dashboard',
-  styleUrl: './dashboard.scss',
+  imports: [],
   templateUrl: './dashboard.html',
+  styleUrl: './dashboard.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Dashboard {}
+export class Dashboard {
+  readonly currentUser =
+    inject(AuthService).currentUser;
+}
