@@ -460,3 +460,9 @@ docs/setup/WORKFLOW.md
 ```
 
 Ahí se explica cómo coger tareas, trabajar con ramas, crear Pull Requests y utilizar el CI.
+
+También puedes consultar:
+
+docs/setup/MARTIN_WORKFLOW.md
+
+Ese documento recoge la metodología personal que utiliza Martín para resolver cada tarea de principio a fin. No es obligatorio seguirla exactamente, pero puede servir como referencia para construir tu propio workflow manteniendo compatibilidad con el proceso general del proyecto.
