@@ -42,7 +42,8 @@ class AuthApiIntegrationTest {
     private static final String PASSWORD =
             "correct-password-123";
 
-    @Container
+    @SuppressWarnings("deprecation")
+@Container
     @ServiceConnection
     static final PostgreSQLContainer<?> postgres =
             new PostgreSQLContainer<>("postgres:17-alpine");
@@ -379,7 +380,8 @@ class AuthApiIntegrationTest {
         return cookie;
     }
 
-    private String accessToken(MvcResult result)
+    @SuppressWarnings("deprecation")
+private String accessToken(MvcResult result)
             throws Exception {
 
         return jsonMapper
