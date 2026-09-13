@@ -1,0 +1,67 @@
+<div class="max-w-2xl mx-auto p-4">
+  <h1 class="text-2xl font-bold mb-6">Crear Nueva Cápsula</h1>
+
+  <!-- [formGroup] conecta este formulario HTML con la variable capsuleForm de TypeScript -->
+  <!-- (ngSubmit) ejecuta la función onSubmit() cuando el usuario pulsa Enter o el botón -->
+  <form [formGroup]="capsuleForm" (ngSubmit)="onSubmit()" class="space-y-4 bg-white p-6 rounded-lg shadow-md border">
+    
+    <!-- Título -->
+    <div>
+      <label class="block text-sm font-bold mb-1">Título</label>
+      <!-- formControlName le dice a Angular exactamente qué campo del modelo TS es este input -->
+      <input type="text" formControlName="title" 
+             class="w-full border rounded p-2 focus:ring focus:ring-blue-200"
+             placeholder="Ej. Viaje a Japón">
+      
+      <!-- Mensaje de error dinámico -->
+      <div *ngIf="capsuleForm.get('title')?.invalid && capsuleForm.get('title')?.touched" class="text-red-500 text-xs mt-1">
+        El título es obligatorio y máximo 100 caracteres.
+      </div>
+    </div>
+
+    <!-- Descripción -->
+    <div>
+      <label class="block text-sm font-bold mb-1">Descripción</label>
+      <textarea formControlName="description" rows="3"
+                class="w-full border rounded p-2 focus:ring focus:ring-blue-200"
+                placeholder="Escribe un mensaje para el futuro..."></textarea>
+      <div *ngIf="capsuleForm.get('description')?.invalid && capsuleForm.get('description')?.touched" class="text-red-500 text-xs mt-1">
+        La descripción es obligatoria.
+      </div>
+    </div>
+
+    <!-- Tipo de Cápsula -->
+    <div>
+      <label class="block text-sm font-bold mb-1">Tipo de Cápsula</label>
+      <select formControlName="type" class="w-full border rounded p-2 focus:ring focus:ring-blue-200">
+        <option value="PERSONAL">Personal (Solo para mí)</option>
+        <option value="SHARED">Compartida (Con amigos)</option>
+      </select>
+    </div>
+
+    <!-- Fecha y Hora en una misma fila -->
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-bold mb-1">Fecha de Apertura</label>
+        <input type="date" formControlName="date" class="w-full border rounded p-2 focus:ring focus:ring-blue-200">
+      </div>
+      <div>
+        <label class="block text-sm font-bold mb-1">Hora</label>
+        <input type="time" formControlName="time" class="w-full border rounded p-2 focus:ring focus:ring-blue-200">
+      </div>
+    </div>
+
+    <!-- Zona horaria (Solo lectura, se rellena automáticamente desde TS) -->
+    <div>
+      <label class="block text-sm font-bold mb-1">Zona Horaria Detectada</label>
+      <input type="text" formControlName="timezone" readonly
+             class="w-full border rounded p-2 bg-gray-100 text-gray-500">
+    </div>
+
+    <button type="submit" 
+            class="w-full bg-black text-white font-bold py-2 px-4 rounded hover:bg-gray-800 transition-colors">
+      Sellar Cápsula
+    </button>
+
+  </form>
+</div>
