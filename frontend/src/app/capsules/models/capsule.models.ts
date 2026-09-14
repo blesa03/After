@@ -3,9 +3,9 @@ export interface CapsuleSummary {
   title: string;
   type: 'PERSONAL' | 'SHARED';
   status: string;
-  openDate: string;
+  opensAt: string;
+  timezone: string;
   role: string;
-  timeRemaining?: string; 
 }
 
 export interface CreateCapsuleRequest {

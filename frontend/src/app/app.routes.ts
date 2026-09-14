@@ -24,16 +24,10 @@ export const routes: Routes = [
         loadComponent: () =>
           import(
             './dashboard/pages/dashboard/dashboard'
-          ).then((m) => m.DashboardComponent),
+          ).then((m) => m.Dashboard),
       },
       
-        {
-        path: 'capsules/create',
-        loadComponent: () =>
-          import(
-            './capsules/pages/create-capsule/create-capsule'
-          ).then((m) => m.CreateCapsule),
-      },
+       
       {
         path: 'capsules',
         loadChildren: () =>

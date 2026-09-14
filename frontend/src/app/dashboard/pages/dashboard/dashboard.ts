@@ -1,17 +1,17 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
-import { CommonModule }  from '@angular/common';
 import { CapsuleService } from '../../../capsules/services/capsule.service';
 import { CapsuleSummary } from '../../../capsules/models/capsule.models';
+import { DatePipe } from '@angular/common';
 
 @Component({
   selector: 'app-dashboard',
-  standalone: true,
-  imports: [CommonModule],
   templateUrl: './dashboard.html',
-  styleUrls: ['./dashboard.scss']
+  styleUrl: './dashboard.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [DatePipe]
 })
-export class DashboardComponent implements OnInit {
+export class Dashboard implements OnInit {
   private capsuleService = inject(CapsuleService);
   private router = inject(Router);
 
@@ -20,7 +20,7 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.capsuleService.getCapsules().subscribe({
-      next: (data) => {
+      next: (data: CapsuleSummary[]) => {
         this.capsules = data;
         this.state = data.length > 0 ? 'content' : 'empty';
       },

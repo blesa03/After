@@ -4,11 +4,24 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CapsuleService } from '../../services/capsule.service';
 import { CreateCapsuleRequest } from '../../models/capsule.models';
+import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+
+export const futureDateValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const date = control.get('date')?.value;
+  const time = control.get('time')?.value;
+
+  if (date && time) {
+    const selectedDate = new Date(`${date}T${time}`);
+    if (selectedDate.getTime() <= new Date().getTime()) {
+      return { notFuture: true }; 
+    }
+  }
+  return null;
+};
 
 @Component({
   selector: 'app-create-capsule',
   standalone: true,
-  // ReactiveFormsModule es OBLIGATORIO aquí para que HTML entienda [formGroup]
   imports: [CommonModule, ReactiveFormsModule],
   styleUrl: './create-capsule.scss',
   templateUrl: './create-capsule.html',
@@ -18,15 +31,17 @@ export class CreateCapsule {
   private capsuleService = inject(CapsuleService);
   private router = inject(Router);
 
-  // AQUÍ declaramos la variable que tu HTML estaba buscando
+  isSubmitting = false;
+  errorMessage = '';
+
   capsuleForm = this.fb.group({
-    title: ['', [Validators.required, Validators.maxLength(100)]],
-    description: ['', [Validators.required, Validators.maxLength(500)]],
+    title: ['', [Validators.required, Validators.maxLength(255)]], 
+    description: [''], 
     type: ['PERSONAL', Validators.required],
     date: ['', Validators.required],
     time: ['', Validators.required],
     timezone: [Intl.DateTimeFormat().resolvedOptions().timeZone, Validators.required]
-  });
+  }, { validators: futureDateValidator }); 
 
   onSubmit() {
 
@@ -44,7 +59,7 @@ export class CreateCapsule {
       title: formValues.title!,
       description: formValues.description!,
       type: formValues.type! as 'PERSONAL' | 'SHARED',
-      opensAt: openDateISO, // Cambiado de openDate a opensAt
+      opensAt: openDateISO, 
       timezone: formValues.timezone!
     };
 

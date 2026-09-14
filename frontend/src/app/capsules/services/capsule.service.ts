@@ -1,20 +1,21 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { CapsuleSummary, CreateCapsuleRequest } from '../models/capsule.models';
+import { CreateCapsuleRequest, CapsuleSummary } from '../models/capsule.models';
+import { API_BASE_URL } from '../../core/config/api.config';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class CapsuleService {
   private http = inject(HttpClient);
-  
-  // Asumimos que Angular usa proxy.conf.json para redirigir /api al backend
-  private apiUrl = '/api/capsules'; 
+  private readonly apiBaseUrl = inject(API_BASE_URL); 
 
-  getCapsules(): Observable<CapsuleSummary[]> {
-    return this.http.get<CapsuleSummary[]>(this.apiUrl);
+  createCapsule(payload: CreateCapsuleRequest) {
+    // Usamos la variable inyectada
+    return this.http.post<CapsuleSummary>(`${this.apiBaseUrl}/capsules`, payload);
   }
 
-  createCapsule(data: CreateCapsuleRequest): Observable<{ id: string }> {
-    return this.http.post<{ id: string }>(this.apiUrl, data);
+  getCapsules() {
+    return this.http.get<CapsuleSummary[]>(`${this.apiBaseUrl}/capsules`);
   }
 }
