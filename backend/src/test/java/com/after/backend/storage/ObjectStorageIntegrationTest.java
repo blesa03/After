@@ -35,7 +35,9 @@ class ObjectStorageIntegrationTest {
     @Container
     static final GenericContainer<?> minio =
             new GenericContainer<>(
-                    DockerImageName.parse("minio/minio:latest")
+                    DockerImageName.parse(
+                        "quay.io/minio/minio:RELEASE.2025-04-08T15-41-24Z"
+                    )
             )
                     .withEnv(
                             "MINIO_ROOT_USER",
