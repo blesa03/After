@@ -17,7 +17,7 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:RELEASE.2025-04-08T15-41-24Z
     container_name: after-minio
     command: server /data --console-address ":9001"
     environment:
@@ -30,7 +30,7 @@ services:
       - after_minio_data:/data
 
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:RELEASE.2025-04-08T15-39-49Z
     container_name: after-minio-init
     depends_on:
       - minio

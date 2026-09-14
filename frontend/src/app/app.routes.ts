@@ -26,6 +26,8 @@ export const routes: Routes = [
             './dashboard/pages/dashboard/dashboard'
           ).then((m) => m.Dashboard),
       },
+      
+       
       {
         path: 'capsules',
         loadChildren: () =>
