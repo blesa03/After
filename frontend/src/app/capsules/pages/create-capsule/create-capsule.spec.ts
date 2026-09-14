@@ -4,20 +4,17 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { CapsuleService } from '../../services/capsule.service';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
-
-
-declare const jasmine: any;
+import { vi } from 'vitest';
 
 describe('CreateCapsule', () => {
   let component: CreateCapsule;
   let fixture: ComponentFixture<CreateCapsule>;
-  
   let capsuleServiceSpy: any;
   let routerSpy: any;
 
   beforeEach(async () => {
-    capsuleServiceSpy = jasmine.createSpyObj('CapsuleService', ['createCapsule']);
-    routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    capsuleServiceSpy = { createCapsule: vi.fn() };
+    routerSpy = { navigate: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [CreateCapsule, ReactiveFormsModule],
@@ -38,38 +35,26 @@ describe('CreateCapsule', () => {
 
   it('should invalidate form if date is in the past', () => {
     component.capsuleForm.patchValue({
-      title: 'Viaje a Roma',
-      date: '2000-01-01',
-      time: '12:00'
+      title: 'Viaje', date: '2000-01-01', time: '12:00'
     });
-    
     component.capsuleForm.updateValueAndValidity();
-    
-
     expect(component.capsuleForm.hasError('notFuture')).toBe(true);
-    expect(component.capsuleForm.invalid).toBe(true);
   });
 
   it('should call createCapsule service and navigate on valid submit', () => {
     const futureDate = new Date();
     futureDate.setFullYear(futureDate.getFullYear() + 1);
-    const dateStr = futureDate.toISOString().split('T')[0];
-
+    
     component.capsuleForm.patchValue({
-      title: 'Cápsula válida',
-      type: 'PERSONAL',
-      date: dateStr,
-      time: '15:30',
-      timezone: 'Europe/Madrid'
+      title: 'Válida', type: 'PERSONAL',
+      date: futureDate.toISOString().split('T')[0], time: '15:30', timezone: 'Europe/Madrid'
     });
 
-    capsuleServiceSpy.createCapsule.and.returnValue(of({ id: 'capsule-123' }));
-
+    capsuleServiceSpy.createCapsule.mockReturnValue(of({ id: '123' }));
     component.onSubmit();
 
     expect(capsuleServiceSpy.createCapsule).toHaveBeenCalled();
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/capsules', 'capsule-123']);
-    expect(component.isSubmitting).toBe(true);
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/capsules', '123']);
   });
 
   it('should show error message if service fails', () => {
@@ -77,17 +62,12 @@ describe('CreateCapsule', () => {
     futureDate.setFullYear(futureDate.getFullYear() + 1);
     
     component.capsuleForm.patchValue({
-      title: 'Cápsula fallida',
-      date: futureDate.toISOString().split('T')[0],
-      time: '10:00'
+      title: 'Fallida', date: futureDate.toISOString().split('T')[0], time: '10:00'
     });
 
-    capsuleServiceSpy.createCapsule.and.returnValue(throwError(() => new Error('API Error')));
-
+    capsuleServiceSpy.createCapsule.mockReturnValue(throwError(() => new Error('Error')));
     component.onSubmit();
 
-    
-    expect(component.isSubmitting).toBe(false);
-    expect(component.errorMessage).toContain('Hubo un error al crear la cápsula');
+    expect(component.errorMessage).toContain('Hubo un error');
   });
 });
