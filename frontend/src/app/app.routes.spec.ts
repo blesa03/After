@@ -7,6 +7,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 
 import { AuthService } from './auth/services/auth.service';
+import { CapsuleService } from './capsules/services/capsule.service';
 import { routes } from './app.routes';
 
 describe('Application routes', () => {
@@ -25,6 +26,10 @@ describe('Application routes', () => {
     logout: () => of(void 0),
   };
 
+  const capsuleServiceStub = {
+    getCapsules: () => of([]),
+  };
+
   beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [
@@ -33,10 +38,16 @@ describe('Application routes', () => {
           provide: AuthService,
           useValue: authStub,
         },
+        {
+          provide: CapsuleService,
+          useValue: capsuleServiceStub,
+        },
       ],
     });
 
-    harness = await RouterTestingHarness.create();
+    harness =
+      await RouterTestingHarness.create();
+
     router = TestBed.inject(Router);
   });
 
@@ -47,7 +58,7 @@ describe('Application routes', () => {
 
     expect(
       harness.routeNativeElement?.textContent,
-    ).toContain('Dashboard');
+    ).toContain('Mis Cápsulas');
   });
 
   it('should render the login page', async () => {
@@ -81,7 +92,7 @@ describe('Application routes', () => {
 
     expect(
       harness.routeNativeElement?.textContent,
-    ).toContain('Dashboard');
+    ).toContain('Mis Cápsulas');
   });
 
   it('should render the not found page for an unknown route', async () => {
