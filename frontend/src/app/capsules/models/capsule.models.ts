@@ -15,3 +15,10 @@ export interface CreateCapsuleRequest {
   opensAt: string; // <-- Cambia openDate por opensAt aquí
   timezone: string;
 }
+
+export interface UpdateCapsuleRequest {
+  title: string;
+  description?: string;
+  opensAt: string;
+  timezone: string;
+}

@@ -257,4 +257,11 @@ public class Capsule {
     public Set<CapsuleMember> getMembers() {
         return Collections.unmodifiableSet(members);
     }
+
+    public void update(String title, String description, Instant opensAt, String timezone) {
+        this.title = title;
+        this.description = description;
+        this.opensAt = opensAt;
+        this.timezone = timezone;
+    }
 }

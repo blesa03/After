@@ -3,9 +3,11 @@ package com.after.backend.capsule.application;
 import com.after.backend.capsule.api.dto.CapsuleDetailResponse;
 import com.after.backend.capsule.api.dto.CapsuleSummaryResponse;
 import com.after.backend.capsule.api.dto.CreateCapsuleRequest;
+import com.after.backend.capsule.api.dto.UpdateCapsuleRequest;
 import com.after.backend.capsule.domain.Capsule;
 import com.after.backend.capsule.domain.CapsuleMember;
 import com.after.backend.capsule.domain.CapsuleMemberRole;
+import com.after.backend.capsule.domain.CapsuleStatus;
 import com.after.backend.capsule.exception.CapsuleNotFoundException;
 import com.after.backend.capsule.exception.InvalidCapsuleRequestException;
 import com.after.backend.capsule.infrastructure.CapsuleMemberRepository;
@@ -31,8 +33,7 @@ public class CapsuleService {
             CapsuleMemberRepository capsuleMemberRepository
     ) {
         this.capsuleRepository = capsuleRepository;
-        this.capsuleMemberRepository =
-                capsuleMemberRepository;
+        this.capsuleMemberRepository = capsuleMemberRepository;
     }
 
     @Transactional
@@ -86,6 +87,51 @@ public class CapsuleService {
                         .orElseThrow(
                                 CapsuleNotFoundException::new
                         );
+
+        return CapsuleDetailResponse.from(membership);
+    }
+
+    @Transactional
+    public CapsuleDetailResponse update(
+            User user,
+            UUID capsuleId,
+            UpdateCapsuleRequest request
+    ) {
+        CapsuleMember membership =
+                capsuleMemberRepository
+                        .findWithCapsuleByCapsuleIdAndUserId(
+                                capsuleId,
+                                user.getId()
+                        )
+                        .orElseThrow(
+                                CapsuleNotFoundException::new
+                        );
+
+        if (membership.getRole() != CapsuleMemberRole.OWNER) {
+            throw new InvalidCapsuleRequestException(
+                    "Solo el propietario puede editar la cápsula"
+            );
+        }
+
+        Capsule capsule = membership.getCapsule();
+
+        if (capsule.getStatus() != CapsuleStatus.COLLECTING) {
+            throw new InvalidCapsuleRequestException(
+                    "Solo se pueden editar cápsulas en estado COLLECTING"
+            );
+        }
+
+        validateOpeningTime(request.opensAt());
+        validateTimezone(request.timezone());
+
+       capsule.update(
+                request.title(),
+                request.description(),
+                request.opensAt(),
+                request.timezone()
+        );
+
+        capsuleRepository.saveAndFlush(capsule);
 
         return CapsuleDetailResponse.from(membership);
     }
