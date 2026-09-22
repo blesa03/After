@@ -1,38 +1,72 @@
-import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
-import { Router } from '@angular/router';
-import { CapsuleService } from '../../../capsules/services/capsule.service';
-import { CapsuleSummary } from '../../../capsules/models/capsule.models';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { Router } from '@angular/router';
+
+import { CapsuleSummary } from '../../../capsules/models/capsule.models';
+import { CapsuleService } from '../../../capsules/services/capsule.service';
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe]
+  imports: [DatePipe],
 })
 export class Dashboard implements OnInit {
-  private capsuleService = inject(CapsuleService);
-  private router = inject(Router);
+  private readonly capsuleService =
+    inject(CapsuleService);
 
-  capsules: CapsuleSummary[] = [];
-  state: 'loading' | 'content' | 'empty' | 'error' = 'loading';
+  private readonly router =
+    inject(Router);
 
-  ngOnInit() {
-    this.capsuleService.getCapsules().subscribe({
-      next: (data: CapsuleSummary[]) => {
-        this.capsules = data;
-        this.state = data.length > 0 ? 'content' : 'empty';
-      },
-      error: () => this.state = 'error'
-    });
+  readonly capsules =
+    signal<CapsuleSummary[]>([]);
+
+  readonly state =
+    signal<
+      'loading' |
+      'content' |
+      'empty' |
+      'error'
+    >('loading');
+
+  ngOnInit(): void {
+    this.capsuleService
+      .getCapsules()
+      .subscribe({
+        next: (
+          data: CapsuleSummary[],
+        ) => {
+          this.capsules.set(data);
+
+          this.state.set(
+            data.length > 0
+              ? 'content'
+              : 'empty',
+          );
+        },
+        error: () => {
+          this.state.set('error');
+        },
+      });
   }
 
-  goToDetail(id: string) {
-    this.router.navigate(['/capsules', id]);
+  goToDetail(id: string): void {
+    void this.router.navigate([
+      '/capsules',
+      id,
+    ]);
   }
 
-  goToCreate() {
-    this.router.navigate(['/capsules/create']);
+  goToCreate(): void {
+    void this.router.navigate([
+      '/capsules/create',
+    ]);
   }
 }

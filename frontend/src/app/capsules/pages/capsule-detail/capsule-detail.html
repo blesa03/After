@@ -1,0 +1,494 @@
+<div class="detail-shell">
+  <div class="mx-auto max-w-4xl p-4 sm:p-6">
+    <button
+      type="button"
+      class="back-button mb-6 text-sm font-medium"
+      (click)="backToDashboard()"
+    >
+      ← Volver al dashboard
+    </button>
+
+    @if (isLoading()) {
+      <section
+        class="detail-card rounded-xl border p-8 text-center"
+      >
+        <p class="text-slate-500">
+          Cargando cápsula...
+        </p>
+      </section>
+    } @else if (loadError()) {
+      <section class="error-card rounded-xl border p-6">
+        <h1 class="mb-2 text-xl font-bold">
+          No se pudo cargar la cápsula
+        </h1>
+
+        <p class="text-sm">
+          {{ loadError() }}
+        </p>
+      </section>
+    } @else if (capsule(); as currentCapsule) {
+      <section
+        class="detail-card detail-card-accent mb-6 rounded-2xl border p-6"
+      >
+        <div
+          class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+        >
+          <div>
+            <div
+              class="mb-3 flex flex-wrap items-center gap-2"
+            >
+              <span
+                class="badge rounded-full border px-3 py-1 text-xs font-semibold"
+                [class.badge-personal]="currentCapsule.type === 'PERSONAL'"
+                [class.badge-shared]="currentCapsule.type === 'SHARED'"
+              >
+                {{ typeLabel(currentCapsule.type) }}
+              </span>
+
+              <span
+                class="badge rounded-full border px-3 py-1 text-xs font-semibold"
+                [class.badge-collecting]="currentCapsule.status === 'COLLECTING'"
+                [class.badge-sealed]="currentCapsule.status === 'SEALED'"
+                [class.badge-opened]="currentCapsule.status === 'OPENED'"
+              >
+                {{ statusLabel(currentCapsule.status) }}
+              </span>
+
+              <span
+                class="badge rounded-full border px-3 py-1 text-xs font-semibold"
+                [class.badge-owner]="currentCapsule.role === 'OWNER'"
+                [class.badge-contributor]="currentCapsule.role === 'CONTRIBUTOR'"
+              >
+                {{ roleLabel(currentCapsule.role) }}
+              </span>
+            </div>
+
+            <h1 class="text-3xl font-bold text-slate-900">
+              {{ currentCapsule.title }}
+            </h1>
+
+            @if (currentCapsule.description) {
+              <p
+                class="mt-3 whitespace-pre-line text-slate-600"
+              >
+                {{ currentCapsule.description }}
+              </p>
+            } @else {
+              <p
+                class="mt-3 text-sm italic text-slate-400"
+              >
+                Esta cápsula no tiene descripción.
+              </p>
+            }
+          </div>
+
+          @if (
+            canEdit() &&
+            !isEditing()
+          ) {
+            <button
+              type="button"
+              class="edit-button shrink-0 rounded-lg px-4 py-2.5 text-sm font-semibold"
+              (click)="startEditing()"
+            >
+              Editar cápsula
+            </button>
+          }
+        </div>
+      </section>
+
+      @if (
+        currentCapsule.status === 'COLLECTING'
+      ) {
+        <section
+          class="countdown-box mb-6 rounded-2xl border p-6"
+        >
+          <p
+            class="text-sm font-semibold text-indigo-700"
+          >
+            Tiempo restante
+          </p>
+
+          <p
+            class="mt-1 text-3xl font-bold text-slate-900"
+          >
+            {{ getCountdown(currentCapsule.opensAt) }}
+          </p>
+
+          <p
+            class="mt-2 text-sm text-slate-500"
+          >
+            Apertura:
+            {{ currentCapsule.opensAt | date:'medium' }}
+          </p>
+        </section>
+      }
+
+      @if (
+        currentCapsule.status === 'SEALED'
+      ) {
+        <section
+          class="sealed-card mb-6 rounded-xl border p-6"
+        >
+          <h2 class="font-bold">
+            Cápsula sellada
+          </h2>
+
+          <p class="mt-2 text-sm">
+            La cápsula ya no puede modificarse y
+            permanecerá cerrada hasta su apertura.
+          </p>
+        </section>
+      }
+
+      @if (
+        currentCapsule.status === 'OPENED'
+      ) {
+        <section
+          class="opened-card mb-6 rounded-xl border p-6"
+        >
+          <h2 class="font-bold">
+            Cápsula abierta
+          </h2>
+
+          <p class="mt-2 text-sm">
+            Esta cápsula ya ha alcanzado su fecha
+            de apertura.
+          </p>
+        </section>
+      }
+
+      <section
+        class="detail-card mb-6 rounded-xl border p-6"
+      >
+        <h2
+          class="mb-4 text-lg font-bold text-slate-900"
+        >
+          Detalles
+        </h2>
+
+        <dl
+          class="grid grid-cols-1 gap-5 sm:grid-cols-2"
+        >
+          <div>
+            <dt class="detail-label">
+              Tipo
+            </dt>
+
+            <dd class="detail-value">
+              {{ typeLabel(currentCapsule.type) }}
+            </dd>
+          </div>
+
+          <div>
+            <dt class="detail-label">
+              Estado
+            </dt>
+
+            <dd class="detail-value">
+              {{ statusLabel(currentCapsule.status) }}
+            </dd>
+          </div>
+
+          <div>
+            <dt class="detail-label">
+              Tu rol
+            </dt>
+
+            <dd class="detail-value">
+              {{ roleLabel(currentCapsule.role) }}
+            </dd>
+          </div>
+
+          <div>
+            <dt class="detail-label">
+              Zona horaria
+            </dt>
+
+            <dd class="detail-value">
+              {{ currentCapsule.timezone }}
+            </dd>
+          </div>
+
+          <div class="sm:col-span-2">
+            <dt class="detail-label">
+              Fecha de apertura
+            </dt>
+
+            <dd class="detail-value">
+              {{ currentCapsule.opensAt | date:'full' }}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section
+        class="detail-card mb-6 rounded-xl border p-6"
+      >
+        <div
+          class="flex items-center justify-between gap-4"
+        >
+          <div>
+            <h2
+              class="text-lg font-bold text-slate-900"
+            >
+              Contribuciones
+            </h2>
+
+            <p
+              class="mt-2 text-sm text-slate-500"
+            >
+              Las contribuciones estarán disponibles
+              en una próxima tarea.
+            </p>
+          </div>
+
+          <span class="placeholder-pill">
+            Próximamente
+          </span>
+        </div>
+      </section>
+
+      @if (
+        currentCapsule.type === 'SHARED'
+      ) {
+        <section
+          class="detail-card rounded-xl border p-6"
+        >
+          <div
+            class="flex items-center justify-between gap-4"
+          >
+            <div>
+              <h2
+                class="text-lg font-bold text-slate-900"
+              >
+                Participantes
+              </h2>
+
+              <p
+                class="mt-2 text-sm text-slate-500"
+              >
+                La gestión de participantes estará
+                disponible en una próxima tarea.
+              </p>
+            </div>
+
+            <span class="placeholder-pill">
+              Próximamente
+            </span>
+          </div>
+        </section>
+      }
+
+      @if (isEditing()) {
+        <div
+          class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="presentation"
+          (click)="cancelEditing()"
+        >
+          <section
+            class="modal-card max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-capsule-title"
+            (click)="$event.stopPropagation()"
+          >
+            <div
+              class="mb-5 flex items-start justify-between gap-4"
+            >
+              <div>
+                <p
+                  class="text-sm font-semibold text-indigo-600"
+                >
+                  Configuración
+                </p>
+
+                <h2
+                  id="edit-capsule-title"
+                  class="mt-1 text-2xl font-bold text-slate-900"
+                >
+                  Editar cápsula
+                </h2>
+
+                <p
+                  class="mt-1 text-sm text-slate-500"
+                >
+                  Actualiza la configuración antes
+                  de sellarla.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                class="modal-close rounded-lg p-2 text-xl leading-none"
+                aria-label="Cerrar"
+                [disabled]="isSaving()"
+                (click)="cancelEditing()"
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              class="space-y-5"
+              [formGroup]="editForm"
+              (ngSubmit)="saveChanges()"
+            >
+              <div>
+                <label
+                  for="edit-capsule-title-input"
+                  class="form-label"
+                >
+                  Título
+                </label>
+
+                <input
+                  id="edit-capsule-title-input"
+                  type="text"
+                  formControlName="title"
+                  class="form-control"
+                />
+
+                @if (
+                  editForm.get('title')?.invalid &&
+                  editForm.get('title')?.touched
+                ) {
+                  <p class="form-error">
+                    El título es obligatorio y no
+                    puede superar los 255 caracteres.
+                  </p>
+                }
+              </div>
+
+              <div>
+                <label
+                  for="edit-capsule-description"
+                  class="form-label"
+                >
+                  Descripción
+                </label>
+
+                <textarea
+                  id="edit-capsule-description"
+                  rows="4"
+                  formControlName="description"
+                  class="form-control resize-y"
+                ></textarea>
+              </div>
+
+              <div
+                class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+              >
+                <div>
+                  <label
+                    for="edit-capsule-date"
+                    class="form-label"
+                  >
+                    Fecha de apertura
+                  </label>
+
+                  <input
+                    id="edit-capsule-date"
+                    type="date"
+                    formControlName="date"
+                    [min]="minDate"
+                    (change)="onEditDateChange()"
+                    class="form-control"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    for="edit-capsule-time"
+                    class="form-label"
+                  >
+                    Hora
+                  </label>
+
+                  <input
+                    id="edit-capsule-time"
+                    type="time"
+                    formControlName="time"
+                    (change)="onEditTimeChange()"
+                    class="form-control"
+                  />
+                </div>
+              </div>
+
+              @if (
+                editForm.hasError('notFuture') &&
+                (
+                  editForm.get('date')?.touched ||
+                  editForm.get('time')?.touched
+                )
+              ) {
+                <p class="form-error">
+                  La fecha y hora de apertura deben
+                  estar en el futuro.
+                </p>
+              }
+
+              <div>
+                <label
+                  for="edit-capsule-timezone"
+                  class="form-label"
+                >
+                  Zona horaria
+                </label>
+
+                <select
+                  id="edit-capsule-timezone"
+                  formControlName="timezone"
+                  class="form-control"
+                >
+                  @for (
+                    timezone of timezones;
+                    track timezone
+                  ) {
+                    <option [value]="timezone">
+                      {{ timezone }}
+                    </option>
+                  }
+                </select>
+              </div>
+
+              @if (saveError()) {
+                <div class="api-error">
+                  {{ saveError() }}
+                </div>
+              }
+
+              <div
+                class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end"
+              >
+                <button
+                  type="button"
+                  class="cancel-button rounded-lg px-4 py-2.5 font-semibold"
+                  [disabled]="isSaving()"
+                  (click)="cancelEditing()"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  class="save-button rounded-lg px-4 py-2.5 font-semibold"
+                  [disabled]="
+                    editForm.invalid ||
+                    isSaving()
+                  "
+                >
+                  @if (isSaving()) {
+                    Guardando...
+                  } @else {
+                    Guardar cambios
+                  }
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      }
+    }
+  </div>
+</div>

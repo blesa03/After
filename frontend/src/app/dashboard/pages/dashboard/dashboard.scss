@@ -1,0 +1,87 @@
+:host {
+  display: block;
+}
+
+.dashboard-shell {
+  min-height: 100%;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgb(99 102 241 / 0.08),
+      transparent 30%
+    ),
+    linear-gradient(
+      180deg,
+      #f8fafc 0%,
+      #eef2f7 100%
+    );
+}
+
+.primary-action {
+  background:
+    linear-gradient(
+      135deg,
+      #4f46e5 0%,
+      #6366f1 100%
+    );
+  color: #ffffff;
+  box-shadow:
+    0 8px 18px
+    rgb(79 70 229 / 0.2);
+}
+
+.primary-action:hover {
+  filter: brightness(0.96);
+}
+
+.secondary-action {
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.secondary-action:hover {
+  background: #e0e7ff;
+}
+
+.dashboard-card {
+  border-color: #dbe2ea;
+  background: #ffffff;
+  box-shadow:
+    0 8px 20px
+    rgb(15 23 42 / 0.05);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  border-color: #c7d2fe;
+  box-shadow:
+    0 12px 28px
+    rgb(15 23 42 / 0.09);
+}
+
+.status-card,
+.empty-state {
+  border-color: #cbd5e1;
+  background:
+    rgb(255 255 255 / 0.8);
+}
+
+.empty-icon {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.badge-personal {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.badge-shared {
+  background: #ecfdf5;
+  color: #047857;
+}

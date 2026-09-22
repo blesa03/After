@@ -1,0 +1,293 @@
+:host {
+  display: block;
+}
+
+.detail-shell {
+  min-height: 100%;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgb(79 70 229 / 0.08),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      #f8fafc 0%,
+      #eef2f7 100%
+    );
+}
+
+.back-button {
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.back-button:hover {
+  color: #4338ca;
+}
+
+.detail-card {
+  border-color: #dbe2ea;
+  background: #ffffff;
+  box-shadow:
+    0 8px 22px
+    rgb(15 23 42 / 0.05);
+}
+
+.detail-card-accent {
+  border-color: #c7d2fe;
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff 0%,
+      #f5f7ff 100%
+    );
+}
+
+.edit-button {
+  background:
+    linear-gradient(
+      135deg,
+      #4f46e5 0%,
+      #6366f1 100%
+    );
+  color: #ffffff;
+  box-shadow:
+    0 7px 16px
+    rgb(79 70 229 / 0.2);
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease;
+}
+
+.edit-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.96);
+}
+
+.badge {
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.badge-personal {
+  background: #eef2ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+}
+
+.badge-shared {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.badge-collecting {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
+
+.badge-sealed {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border-color: #ddd6fe;
+}
+
+.badge-opened {
+  background: #ecfeff;
+  color: #0f766e;
+  border-color: #a5f3fc;
+}
+
+.badge-owner {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.badge-contributor {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.countdown-box {
+  border-color: #c7d2fe;
+  background:
+    linear-gradient(
+      135deg,
+      #eef2ff 0%,
+      #f8fafc 100%
+    );
+  box-shadow:
+    0 8px 20px
+    rgb(79 70 229 / 0.06);
+}
+
+.sealed-card {
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+  color: #5b21b6;
+}
+
+.opened-card {
+  border-color: #a5f3fc;
+  background: #ecfeff;
+  color: #115e59;
+}
+
+.error-card {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.detail-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.detail-value {
+  margin-top: 0.25rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.placeholder-pill {
+  flex: 0 0 auto;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.modal-backdrop {
+  background: rgb(15 23 42 / 0.56);
+  backdrop-filter: blur(3px);
+}
+
+.modal-card {
+  background: #ffffff;
+  box-shadow:
+    0 24px 70px
+    rgb(15 23 42 / 0.28);
+  animation:
+    modal-enter 0.16s ease-out;
+}
+
+.modal-close {
+  color: #64748b;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.modal-close:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.form-control {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  padding: 0.65rem 0.75rem;
+  color: #0f172a;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.form-control:hover {
+  border-color: #94a3b8;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow:
+    0 0 0 3px
+    rgb(99 102 241 / 0.14);
+}
+
+.form-error {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+
+.api-error {
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #b91c1c;
+}
+
+.cancel-button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.cancel-button:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.save-button {
+  background:
+    linear-gradient(
+      135deg,
+      #4f46e5 0%,
+      #6366f1 100%
+    );
+  color: #ffffff;
+  transition:
+    filter 0.15s ease;
+}
+
+.save-button:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+.save-button:disabled,
+.cancel-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform:
+      translateY(8px)
+      scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
