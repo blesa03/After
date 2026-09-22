@@ -1,80 +1,172 @@
-<div class="max-w-2xl mx-auto p-4">
-  <h1 class="text-2xl font-bold mb-6">Crear Nueva Cápsula</h1>
+<div class="create-shell">
+  <div class="max-w-2xl mx-auto p-4 sm:p-6">
+    <div class="mb-6">
+      <p class="text-sm font-semibold text-indigo-600 mb-1">
+        Nueva cápsula
+      </p>
 
-  <form [formGroup]="capsuleForm" (ngSubmit)="onSubmit()" class="space-y-4 bg-white p-6 rounded-lg shadow-md border">
-   
-    <div>
-      <label class="block text-sm font-bold mb-1">Título</label>
-      <input type="text" formControlName="title" 
-             class="w-full border rounded p-2 focus:ring focus:ring-blue-200"
-             placeholder="Ej. Viaje a Japón">
-      
-      @if (capsuleForm.get('title')?.invalid && capsuleForm.get('title')?.touched) {
-        <div class="text-red-500 text-xs mt-1">
-          El título es obligatorio y no puede superar los 255 caracteres.
+      <h1 class="text-3xl font-bold text-slate-900">
+        Crear cápsula
+      </h1>
+
+      <p class="mt-2 text-sm text-slate-500">
+        Configura cuándo quieres que pueda abrirse.
+      </p>
+    </div>
+
+    <form
+      [formGroup]="capsuleForm"
+      (ngSubmit)="onSubmit()"
+      class="create-card space-y-5 rounded-2xl border p-6"
+    >
+      <div>
+        <label
+          for="capsule-title"
+          class="block text-sm font-bold text-slate-700 mb-1.5"
+        >
+          Título
+        </label>
+
+        <input
+          id="capsule-title"
+          type="text"
+          formControlName="title"
+          class="form-control"
+          placeholder="Ej. Viaje a Japón"
+        />
+
+        @if (
+          capsuleForm.get('title')?.invalid &&
+          capsuleForm.get('title')?.touched
+        ) {
+          <div class="form-error">
+            El título es obligatorio y no puede superar los 255 caracteres.
+          </div>
+        }
+      </div>
+
+      <div>
+        <label
+          for="capsule-description"
+          class="block text-sm font-bold text-slate-700 mb-1.5"
+        >
+          Descripción
+        </label>
+
+        <textarea
+          id="capsule-description"
+          formControlName="description"
+          rows="4"
+          class="form-control resize-y"
+          placeholder="Escribe un mensaje para el futuro..."
+        ></textarea>
+      </div>
+
+      <div>
+        <label
+          for="capsule-type"
+          class="block text-sm font-bold text-slate-700 mb-1.5"
+        >
+          Tipo de cápsula
+        </label>
+
+        <select
+          id="capsule-type"
+          formControlName="type"
+          class="form-control"
+        >
+          <option value="PERSONAL">
+            Personal · Solo para mí
+          </option>
+
+          <option value="SHARED">
+            Compartida · Con amigos
+          </option>
+        </select>
+      </div>
+
+      <div
+        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+      >
+        <div>
+          <label
+            for="capsule-date"
+            class="block text-sm font-bold text-slate-700 mb-1.5"
+          >
+            Fecha de apertura
+          </label>
+
+          <input
+            id="capsule-date"
+            type="date"
+            formControlName="date"
+            [min]="minDate"
+            (change)="onDateChange()"
+            class="form-control"
+          />
+        </div>
+
+        <div>
+          <label
+            for="capsule-time"
+            class="block text-sm font-bold text-slate-700 mb-1.5"
+          >
+            Hora
+          </label>
+
+          <input
+            id="capsule-time"
+            type="time"
+            formControlName="time"
+            (change)="onTimeChange()"
+            class="form-control"
+          />
+        </div>
+      </div>
+
+      @if (
+        capsuleForm.hasError('notFuture') &&
+        (
+          capsuleForm.get('date')?.touched ||
+          capsuleForm.get('time')?.touched
+        )
+      ) {
+        <div class="form-error">
+          La fecha y hora de apertura deben estar en el futuro.
         </div>
       }
-    </div>
 
-   
-    <div>
-      <label class="block text-sm font-bold mb-1">Descripción</label>
-      <textarea formControlName="description" rows="3"
-                class="w-full border rounded p-2 focus:ring focus:ring-blue-200"
-                placeholder="Escribe un mensaje para el futuro..."></textarea>
-    </div>
+      <div class="timezone-note">
+        <span class="timezone-dot"></span>
 
-    
-    <div>
-      <label class="block text-sm font-bold mb-1">Tipo de Cápsula</label>
-      <select formControlName="type" class="w-full border rounded p-2 focus:ring focus:ring-blue-200">
-        <option value="PERSONAL">Personal (Solo para mí)</option>
-        <option value="SHARED">Compartida (Con amigos)</option>
-      </select>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-bold mb-1">Fecha de Apertura</label>
-        <input type="date" formControlName="date" class="w-full border rounded p-2 focus:ring focus:ring-blue-200">
+        <span>
+          Hora interpretada en
+          <strong>
+            {{ capsuleForm.controls.timezone.value }}
+          </strong>
+        </span>
       </div>
-      <div>
-        <label class="block text-sm font-bold mb-1">Hora</label>
-        <input type="time" formControlName="time" class="w-full border rounded p-2 focus:ring focus:ring-blue-200">
-      </div>
-    </div>
 
-    
-    @if (capsuleForm.hasError('notFuture') && (capsuleForm.get('date')?.touched || capsuleForm.get('time')?.touched)) {
-      <div class="text-red-500 text-xs mt-1">
-        La fecha y hora de apertura deben ser en el futuro.
-      </div>
-    }
-
-  
-    <div>
-      <label class="block text-sm font-bold mb-1">Zona Horaria Detectada</label>
-      <input type="text" formControlName="timezone" readonly
-             class="w-full border rounded p-2 bg-gray-100 text-gray-500">
-    </div>
-
-    
-    @if (errorMessage()) {
-      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
-        {{ errorMessage() }}
-      </div>
-    }
-
-    
-    <button type="submit" 
-            [disabled]="capsuleForm.invalid || isSubmitting()"
-            class="w-full bg-black text-white font-bold py-2 px-4 rounded hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-      @if (isSubmitting()) {
-        Creando cápsula...
-      } @else {
-        Crear cápsula
+      @if (errorMessage()) {
+        <div class="api-error">
+          {{ errorMessage() }}
+        </div>
       }
-    </button>
 
-  </form>
+      <button
+        type="submit"
+        [disabled]="
+          capsuleForm.invalid ||
+          isSubmitting()
+        "
+        class="submit-button w-full font-bold py-3 px-4 rounded-lg transition"
+      >
+        @if (isSubmitting()) {
+          Creando cápsula...
+        } @else {
+          Crear cápsula
+        }
+      </button>
+    </form>
+  </div>
 </div>

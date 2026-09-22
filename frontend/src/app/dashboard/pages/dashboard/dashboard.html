@@ -1,71 +1,120 @@
-<div class="max-w-5xl mx-auto p-4">
-  <!-- Header responsive (Punto 9) -->
-  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-    <h1 class="text-2xl font-bold">Mis Cápsulas</h1>
-    <button (click)="goToCreate()" class="bg-black text-white font-bold py-2 px-4 rounded hover:bg-gray-800 transition-colors w-full sm:w-auto">
-      Crear cápsula
-    </button>
-  </div>
+<div class="dashboard-shell">
+  <div class="max-w-5xl mx-auto p-4">
+    <div
+      class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4"
+    >
+      <div>
+        <p class="text-sm font-semibold text-indigo-600 mb-1">
+          Tu espacio
+        </p>
 
-  <!-- Estado de Carga -->
-  @if (state === 'loading') {
-    <div class="text-center py-10 text-gray-500">
-      Cargando cápsulas...
-    </div>
-  }
+        <h1 class="text-3xl font-bold text-slate-900">
+          Mis Cápsulas
+        </h1>
+      </div>
 
-  <!-- Estado de Error -->
-  @if (state === 'error') {
-    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-      Hubo un problema al cargar tus cápsulas.
-    </div>
-  }
-
-  <!-- Estado Vacío -->
-  @if (state === 'empty') {
-    <div class="text-center py-10 border-2 border-dashed border-gray-300 rounded-lg">
-      <p class="text-gray-500 mb-4">Aún no tienes ninguna cápsula.</p>
-      <button (click)="goToCreate()" class="text-blue-600 hover:underline font-semibold">
-        Crea tu primera cápsula
+      <button
+        type="button"
+        (click)="goToCreate()"
+        class="primary-action font-bold py-2.5 px-5 rounded-lg transition-colors w-full sm:w-auto"
+      >
+        Crear cápsula
       </button>
     </div>
-  }
 
-  <!-- Estado con Contenido -->
-  @if (state === 'content') {
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      
-      <!-- Nuevo control flow (Punto 12) con tracking -->
-      @for (capsule of capsules; track capsule.id) {
-        <div class="border rounded-lg p-5 shadow-sm bg-white flex flex-col justify-between hover:shadow-md transition-shadow">
-          
-          <div class="mb-4">
-            <div class="flex justify-between items-start mb-2">
-              <h2 class="text-lg font-bold truncate pr-2" [title]="capsule.title">
-                {{ capsule.title }}
-              </h2>
-              <span class="text-xs font-bold px-2 py-1 rounded"
-                    [class.bg-blue-100]="capsule.type === 'PERSONAL'"
-                    [class.text-blue-800]="capsule.type === 'PERSONAL'"
-                    [class.bg-green-100]="capsule.type === 'SHARED'"
-                    [class.text-green-800]="capsule.type === 'SHARED'">
-                {{ capsule.type }}
-              </span>
-            </div>
-            
-            <p class="text-sm text-gray-600">Estado: <span class="font-semibold">{{ capsule.status }}</span></p>
-            
-            <!-- Usamos opensAt (Punto 1) -->
-            <p class="text-sm text-gray-600 mt-1">
-              Apertura: {{ capsule.opensAt | date:'short' }}
-            </p>
-          </div>
+    @if (state() === 'loading') {
+      <div
+        class="status-card text-center py-12 rounded-xl border"
+      >
+        <p class="text-slate-500">
+          Cargando cápsulas...
+        </p>
+      </div>
+    }
 
-          <button (click)="goToDetail(capsule.id)" class="w-full border border-black text-black font-semibold py-2 px-4 rounded hover:bg-gray-100 transition-colors">
-            Ver detalles
-          </button>
+    @if (state() === 'error') {
+      <div
+        class="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-700"
+      >
+        Hubo un problema al cargar tus cápsulas.
+      </div>
+    }
+
+    @if (state() === 'empty') {
+      <div
+        class="empty-state text-center py-14 px-6 border-2 border-dashed rounded-xl"
+      >
+        <div
+          class="empty-icon mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full"
+        >
+          <span class="text-xl">◌</span>
         </div>
-      }
-    </div>
-  }
+
+        <h2 class="text-lg font-semibold text-slate-800">
+          Todavía no hay cápsulas
+        </h2>
+
+        <p class="mt-2 text-sm text-slate-500">
+          Cuando crees una cápsula aparecerá aquí.
+        </p>
+      </div>
+    }
+
+    @if (state() === 'content') {
+      <div
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+      >
+        @for (capsule of capsules(); track capsule.id) {
+          <article
+            class="dashboard-card border rounded-xl p-5 flex flex-col justify-between"
+          >
+            <div class="mb-5">
+              <div
+                class="flex justify-between items-start gap-3 mb-3"
+              >
+                <h2
+                  class="text-lg font-bold text-slate-900 truncate"
+                  [title]="capsule.title"
+                >
+                  {{ capsule.title }}
+                </h2>
+
+                <span
+                  class="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
+                  [class.badge-personal]="capsule.type === 'PERSONAL'"
+                  [class.badge-shared]="capsule.type === 'SHARED'"
+                >
+                  {{ capsule.type }}
+                </span>
+              </div>
+
+              <div class="space-y-2">
+                <p class="text-sm text-slate-600">
+                  Estado:
+                  <span class="font-semibold text-slate-800">
+                    {{ capsule.status }}
+                  </span>
+                </p>
+
+                <p class="text-sm text-slate-600">
+                  Apertura:
+                  <span class="font-medium text-slate-800">
+                    {{ capsule.opensAt | date:'short' }}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              (click)="goToDetail(capsule.id)"
+              class="secondary-action w-full font-semibold py-2.5 px-4 rounded-lg transition-colors"
+            >
+              Ver detalles
+            </button>
+          </article>
+        }
+      </div>
+    }
+  </div>
 </div>

@@ -1,0 +1,109 @@
+:host {
+  display: block;
+}
+
+.create-shell {
+  min-height: 100%;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgb(99 102 241 / 0.1),
+      transparent 28%
+    ),
+    linear-gradient(
+      180deg,
+      #f8fafc 0%,
+      #eef2ff 100%
+    );
+}
+
+.create-card {
+  border-color: #dbe2ea;
+  background: #ffffff;
+  box-shadow:
+    0 14px 34px
+    rgb(15 23 42 / 0.08);
+}
+
+.form-control {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  padding: 0.65rem 0.75rem;
+  color: #0f172a;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.form-control:hover {
+  border-color: #94a3b8;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow:
+    0 0 0 3px
+    rgb(99 102 241 / 0.14);
+}
+
+.form-error {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+
+.timezone-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.timezone-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  border-radius: 9999px;
+  background: #6366f1;
+}
+
+.api-error {
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #b91c1c;
+}
+
+.submit-button {
+  background:
+    linear-gradient(
+      135deg,
+      #4f46e5 0%,
+      #6366f1 100%
+    );
+  color: #ffffff;
+  box-shadow:
+    0 8px 18px
+    rgb(79 70 229 / 0.18);
+}
+
+.submit-button:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+.submit-button:disabled {
+  cursor: not-allowed;
+  background: #94a3b8;
+  box-shadow: none;
+  opacity: 0.65;
+}
