@@ -8,6 +8,7 @@ import com.after.backend.capsule.domain.Capsule;
 import com.after.backend.capsule.domain.CapsuleMember;
 import com.after.backend.capsule.domain.CapsuleMemberRole;
 import com.after.backend.capsule.domain.CapsuleStatus;
+import com.after.backend.capsule.exception.CapsuleAccessDeniedException;
 import com.after.backend.capsule.exception.CapsuleNotFoundException;
 import com.after.backend.capsule.exception.InvalidCapsuleRequestException;
 import com.after.backend.capsule.infrastructure.CapsuleMemberRepository;
@@ -108,8 +109,8 @@ public class CapsuleService {
                         );
 
         if (membership.getRole() != CapsuleMemberRole.OWNER) {
-            throw new InvalidCapsuleRequestException(
-                    "Solo el propietario puede editar la cápsula"
+            throw new CapsuleAccessDeniedException(
+                    "Only the owner can edit the capsule"
             );
         }
 
@@ -117,14 +118,14 @@ public class CapsuleService {
 
         if (capsule.getStatus() != CapsuleStatus.COLLECTING) {
             throw new InvalidCapsuleRequestException(
-                    "Solo se pueden editar cápsulas en estado COLLECTING"
+                    "Only COLLECTING capsules can be edited"
             );
         }
 
         validateOpeningTime(request.opensAt());
         validateTimezone(request.timezone());
 
-       capsule.update(
+        capsule.update(
                 request.title(),
                 request.description(),
                 request.opensAt(),

@@ -79,7 +79,6 @@ export class CreateCapsule {
   );
 
   onSubmit(): void {
-    
     if (
       this.capsuleForm.invalid ||
       this.isSubmitting()

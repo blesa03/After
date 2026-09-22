@@ -4,9 +4,9 @@ import com.after.backend.auth.application.AuthService;
 import com.after.backend.capsule.api.dto.CapsuleDetailResponse;
 import com.after.backend.capsule.api.dto.CapsuleSummaryResponse;
 import com.after.backend.capsule.api.dto.CreateCapsuleRequest;
+import com.after.backend.capsule.api.dto.UpdateCapsuleRequest;
 import com.after.backend.capsule.application.CapsuleService;
 import com.after.backend.user.domain.User;
-import com.after.backend.capsule.api.dto.UpdateCapsuleRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -57,13 +57,21 @@ public class CapsuleController {
     }
 
     @PutMapping("/{capsuleId}")
-    public ResponseEntity<CapsuleDetailResponse> updateCapsule(
-            @AuthenticationPrincipal User user,
+    public ResponseEntity<CapsuleDetailResponse> update(
             @PathVariable UUID capsuleId,
-            @Valid @RequestBody UpdateCapsuleRequest request
+            @Valid @RequestBody UpdateCapsuleRequest request,
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        CapsuleDetailResponse response = capsuleService.update(user, capsuleId, request);
-        return ResponseEntity.ok(response);
+        User currentUser =
+                authService.currentUser(jwt.getSubject());
+
+        return ResponseEntity.ok(
+                capsuleService.update(
+                        currentUser,
+                        capsuleId,
+                        request
+                )
+        );
     }
 
     @GetMapping
