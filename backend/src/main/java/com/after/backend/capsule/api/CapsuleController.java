@@ -4,6 +4,7 @@ import com.after.backend.auth.application.AuthService;
 import com.after.backend.capsule.api.dto.CapsuleDetailResponse;
 import com.after.backend.capsule.api.dto.CapsuleSummaryResponse;
 import com.after.backend.capsule.api.dto.CreateCapsuleRequest;
+import com.after.backend.capsule.api.dto.UpdateCapsuleRequest;
 import com.after.backend.capsule.application.CapsuleService;
 import com.after.backend.user.domain.User;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,6 +54,24 @@ public class CapsuleController {
                                 request
                         )
                 );
+    }
+
+    @PutMapping("/{capsuleId}")
+    public ResponseEntity<CapsuleDetailResponse> update(
+            @PathVariable UUID capsuleId,
+            @Valid @RequestBody UpdateCapsuleRequest request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        User currentUser =
+                authService.currentUser(jwt.getSubject());
+
+        return ResponseEntity.ok(
+                capsuleService.update(
+                        currentUser,
+                        capsuleId,
+                        request
+                )
+        );
     }
 
     @GetMapping

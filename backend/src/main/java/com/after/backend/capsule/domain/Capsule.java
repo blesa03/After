@@ -257,4 +257,33 @@ public class Capsule {
     public Set<CapsuleMember> getMembers() {
         return Collections.unmodifiableSet(members);
     }
+
+    public void update(
+        String title,
+        String description,
+        Instant opensAt,
+        String timezone
+    ) {
+        if (status != CapsuleStatus.COLLECTING) {
+            throw new IllegalStateException(
+                    "Only COLLECTING capsules can be edited"
+            );
+        }
+
+        this.title = requireNonBlank(title, "title");
+        this.description = description;
+
+        this.opensAt = Objects.requireNonNull(
+                opensAt,
+                "opensAt cannot be null"
+        );
+
+        if (!opensAt.isAfter(Instant.now())) {
+            throw new IllegalArgumentException(
+                    "opensAt must be in the future"
+            );
+        }
+
+        this.timezone = validateTimezone(timezone);
+    }
 }
