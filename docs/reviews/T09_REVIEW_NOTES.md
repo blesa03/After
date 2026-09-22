@@ -21,7 +21,7 @@
   </tr>
   <tr>
     <td><strong>Estado de revisión</strong></td>
-    <td>Correcciones aplicadas · preflight pendiente</td>
+    <td>Revisión completada · preflight y CI correctos</td>
   </tr>
 </table>
 
@@ -450,3 +450,6 @@ prácticamente define por sí solo buena parte del plan de tests.
 ### Respetar el alcance entre tareas
 
 Cuando una tarea posterior depende de la actual, cerrar primero la dependencia deja una base más clara y estable para continuar.
+
+> [!NOTE]
+> La implementación revisada ha superado el preflight local y los checks de CI.
