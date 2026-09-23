@@ -298,31 +298,296 @@
       <section
         class="detail-card mb-6 rounded-xl border p-6"
       >
-        <div
-          class="flex items-center justify-between gap-4"
-        >
-          <div>
-            <h2
-              class="text-lg font-bold text-slate-900"
-            >
-              Contribuciones
-            </h2>
+        <div class="mb-5">
+          <h2
+            class="text-lg font-bold text-slate-900"
+          >
+            Tus mensajes
+          </h2>
 
-            <p
-              class="mt-2 text-sm text-slate-500"
+          <p
+            class="mt-1 text-sm text-slate-500"
+          >
+            Tus contribuciones de texto
+            dentro de esta cápsula.
+          </p>
+        </div>
+
+        @if (
+          canManageContributions()
+        ) {
+          <form
+            class="mb-6"
+            [formGroup]="
+              contributionForm
+            "
+            (ngSubmit)="
+              createContribution()
+            "
+          >
+            <label
+              for="contribution-text"
+              class="form-label"
             >
-              Las contribuciones estarán
-              disponibles en una próxima
-              tarea.
+              Nuevo mensaje
+            </label>
+
+            <textarea
+              id="contribution-text"
+              rows="4"
+              formControlName="textContent"
+              class="form-control resize-y"
+              placeholder="Escribe algo para el futuro..."
+            ></textarea>
+
+            @if (
+              contributionForm.controls
+                .textContent.invalid &&
+              contributionForm.controls
+                .textContent.touched
+            ) {
+              <p class="form-error">
+                El mensaje no puede estar
+                vacío.
+              </p>
+            }
+
+            <div
+              class="mt-3 flex flex-wrap items-center gap-3"
+            >
+              <button
+                type="submit"
+                class="save-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                [disabled]="
+                  contributionSaving()
+                "
+              >
+                @if (
+                  contributionSaving()
+                ) {
+                  Guardando...
+                } @else {
+                  Guardar mensaje
+                }
+              </button>
+
+              @if (
+                contributionSaved()
+              ) {
+                <span
+                  class="text-sm font-semibold text-emerald-600"
+                >
+                  Guardado
+                </span>
+              }
+            </div>
+          </form>
+        } @else {
+          <div
+            class="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-4"
+          >
+            <p
+              class="text-sm text-slate-600"
+            >
+              Esta cápsula ya no admite
+              nuevos mensajes ni cambios.
             </p>
           </div>
+        }
 
-          <span
-            class="placeholder-pill"
+        @if (
+          contributionError()
+        ) {
+          <div
+            class="api-error mb-4"
           >
-            Próximamente
-          </span>
-        </div>
+            {{
+              contributionError()
+            }}
+          </div>
+        }
+
+        @if (
+          contributionsLoading()
+        ) {
+          <p
+            class="py-5 text-center text-sm text-slate-500"
+          >
+            Cargando mensajes...
+          </p>
+        } @else if (
+          contributions().length === 0
+        ) {
+          <div
+            class="rounded-xl border border-dashed border-slate-300 p-6 text-center"
+          >
+            <p
+              class="font-medium text-slate-700"
+            >
+              Todavía no has escrito
+              ningún mensaje.
+            </p>
+
+            <p
+              class="mt-1 text-sm text-slate-500"
+            >
+              Tus contribuciones
+              aparecerán aquí.
+            </p>
+          </div>
+        } @else {
+          <div
+            class="divide-y divide-slate-100"
+          >
+            @for (
+              contribution
+                of contributions();
+              track contribution.id
+            ) {
+              <article
+                class="py-4 first:pt-0 last:pb-0"
+              >
+                @if (
+                  editingContributionId() ===
+                  contribution.id
+                ) {
+                  <form
+                    [formGroup]="
+                      contributionEditForm
+                    "
+                    (ngSubmit)="
+                      saveContribution(
+                        contribution.id
+                      )
+                    "
+                  >
+                    <textarea
+                      rows="4"
+                      formControlName="textContent"
+                      class="form-control resize-y"
+                    ></textarea>
+
+                    @if (
+                      contributionEditForm
+                        .controls
+                        .textContent
+                        .invalid &&
+                      contributionEditForm
+                        .controls
+                        .textContent
+                        .touched
+                    ) {
+                      <p
+                        class="form-error"
+                      >
+                        El mensaje no puede
+                        estar vacío.
+                      </p>
+                    }
+
+                    <div
+                      class="mt-3 flex flex-wrap gap-2"
+                    >
+                      <button
+                        type="submit"
+                        class="save-button rounded-lg px-3 py-2 text-sm font-semibold"
+                        [disabled]="
+                          contributionSaving()
+                        "
+                      >
+                        @if (
+                          contributionSaving()
+                        ) {
+                          Guardando...
+                        } @else {
+                          Guardar cambios
+                        }
+                      </button>
+
+                      <button
+                        type="button"
+                        class="cancel-button rounded-lg px-3 py-2 text-sm font-semibold"
+                        [disabled]="
+                          contributionSaving()
+                        "
+                        (click)="
+                          cancelContributionEditing()
+                        "
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                } @else {
+                  <p
+                    class="whitespace-pre-line text-slate-700"
+                  >
+                    {{
+                      contribution.textContent
+                    }}
+                  </p>
+
+                  <div
+                    class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span
+                      class="text-xs text-slate-500"
+                    >
+                      Actualizado
+                      {{
+                        contribution.updatedAt
+                          | date:'medium'
+                      }}
+                    </span>
+
+                    @if (
+                      canManageContributions()
+                    ) {
+                      <div
+                        class="flex gap-3"
+                      >
+                        <button
+                          type="button"
+                          class="text-sm font-semibold text-slate-600"
+                          (click)="
+                            startContributionEditing(
+                              contribution
+                            )
+                          "
+                        >
+                          Editar
+                        </button>
+
+                        <button
+                          type="button"
+                          class="text-sm font-semibold text-red-600 disabled:opacity-50"
+                          [disabled]="
+                            deletingContributionId() ===
+                            contribution.id
+                          "
+                          (click)="
+                            deleteContribution(
+                              contribution.id
+                            )
+                          "
+                        >
+                          @if (
+                            deletingContributionId() ===
+                            contribution.id
+                          ) {
+                            Eliminando...
+                          } @else {
+                            Eliminar
+                          }
+                        </button>
+                      </div>
+                    }
+                  </div>
+                }
+              </article>
+            }
+          </div>
+        }
       </section>
 
       @if (

@@ -7,20 +7,23 @@ import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../core/config/api.config';
 import {
   CapsuleDetail,
-  CapsuleSummary,
-  CreateCapsuleRequest,
-  UpdateCapsuleRequest,
   CapsuleParticipant,
+  CapsuleSummary,
+  Contribution,
+  CreateCapsuleRequest,
   InvitationAccepted,
   InvitationCreated,
   InvitationPreview,
+  TextContributionRequest,
+  UpdateCapsuleRequest,
 } from '../models/capsule.models';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CapsuleService {
-  private readonly http = inject(HttpClient);
+  private readonly http =
+    inject(HttpClient);
 
   private readonly apiBaseUrl =
     inject(API_BASE_URL);
@@ -40,7 +43,9 @@ export class CapsuleService {
     );
   }
 
-  getCapsule(id: string) {
+  getCapsule(
+    id: string,
+  ) {
     return this.http.get<CapsuleDetail>(
       `${this.apiBaseUrl}/capsules/${id}`,
     );
@@ -59,7 +64,9 @@ export class CapsuleService {
   getParticipants(
     capsuleId: string,
   ) {
-    return this.http.get<CapsuleParticipant[]>(
+    return this.http.get<
+      CapsuleParticipant[]
+    >(
       `${this.apiBaseUrl}/capsules/${capsuleId}/participants`,
     );
   }
@@ -67,7 +74,9 @@ export class CapsuleService {
   createInvitation(
     capsuleId: string,
   ) {
-    return this.http.post<InvitationCreated>(
+    return this.http.post<
+      InvitationCreated
+    >(
       `${this.apiBaseUrl}/capsules/${capsuleId}/invitations`,
       null,
     );
@@ -76,17 +85,71 @@ export class CapsuleService {
   getInvitation(
     token: string,
   ) {
-    return this.http.get<InvitationPreview>(
-      `${this.apiBaseUrl}/invitations/${encodeURIComponent(token)}`,
+    return this.http.get<
+      InvitationPreview
+    >(
+      `${this.apiBaseUrl}/invitations/${encodeURIComponent(
+        token,
+      )}`,
     );
   }
 
   acceptInvitation(
     token: string,
   ) {
-    return this.http.post<InvitationAccepted>(
-      `${this.apiBaseUrl}/invitations/${encodeURIComponent(token)}/accept`,
+    return this.http.post<
+      InvitationAccepted
+    >(
+      `${this.apiBaseUrl}/invitations/${encodeURIComponent(
+        token,
+      )}/accept`,
       null,
+    );
+  }
+
+  getTextContributions(
+    capsuleId: string,
+  ) {
+    return this.http.get<
+      Contribution[]
+    >(
+      `${this.apiBaseUrl}/capsules/${capsuleId}/contributions/text`,
+    );
+  }
+
+  createTextContribution(
+    capsuleId: string,
+    payload:
+      TextContributionRequest,
+  ) {
+    return this.http.post<
+      Contribution
+    >(
+      `${this.apiBaseUrl}/capsules/${capsuleId}/contributions/text`,
+      payload,
+    );
+  }
+
+  updateTextContribution(
+    capsuleId: string,
+    contributionId: string,
+    payload:
+      TextContributionRequest,
+  ) {
+    return this.http.put<
+      Contribution
+    >(
+      `${this.apiBaseUrl}/capsules/${capsuleId}/contributions/${contributionId}/text`,
+      payload,
+    );
+  }
+
+  deleteContribution(
+    capsuleId: string,
+    contributionId: string,
+  ) {
+    return this.http.delete<void>(
+      `${this.apiBaseUrl}/capsules/${capsuleId}/contributions/${contributionId}`,
     );
   }
 }

@@ -11,6 +11,12 @@ export type CapsuleRole =
   | 'OWNER'
   | 'CONTRIBUTOR';
 
+export type ContributionType =
+  | 'TEXT'
+  | 'IMAGE'
+  | 'AUDIO'
+  | 'VIDEO';
+
 export interface CapsuleSummary {
   id: string;
   title: string;
@@ -70,4 +76,18 @@ export interface InvitationPreview {
 export interface InvitationAccepted {
   capsuleId: string;
   role: 'CONTRIBUTOR';
+}
+
+export interface Contribution {
+  id: string;
+  capsuleId: string;
+  authorUserId: string;
+  type: ContributionType;
+  textContent: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TextContributionRequest {
+  textContent: string;
 }
