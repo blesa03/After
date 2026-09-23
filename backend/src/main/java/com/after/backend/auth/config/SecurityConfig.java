@@ -42,6 +42,10 @@ public class SecurityConfig {
                                 "/api/auth/refresh",
                                 "/api/auth/logout"
                         ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/invitations/*"
+                        ).permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
