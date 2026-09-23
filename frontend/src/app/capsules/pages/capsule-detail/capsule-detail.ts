@@ -24,6 +24,7 @@ import { finalize } from 'rxjs';
 
 import {
   CapsuleDetail,
+  CapsuleParticipant,
   CapsuleRole,
   CapsuleStatus,
   CapsuleType,
@@ -174,6 +175,9 @@ export class CapsuleDetailPage
       null,
     );
 
+  readonly participants =
+    signal<CapsuleParticipant[]>([]);
+
   readonly isLoading =
     signal(true);
 
@@ -193,6 +197,25 @@ export class CapsuleDetailPage
       null,
     );
 
+  readonly participantsLoading =
+    signal(false);
+
+  readonly invitationLoading =
+    signal(false);
+
+  readonly invitationUrl =
+    signal<string | null>(
+      null,
+    );
+
+  readonly invitationError =
+    signal<string | null>(
+      null,
+    );
+
+  readonly invitationCopied =
+    signal(false);
+
   readonly timezones =
     getSupportedTimezones();
 
@@ -203,6 +226,21 @@ export class CapsuleDetailPage
 
       return (
         currentCapsule?.role ===
+          'OWNER' &&
+        currentCapsule.status ===
+          'COLLECTING'
+      );
+    });
+
+  readonly canInvite =
+    computed(() => {
+      const currentCapsule =
+        this.capsule();
+
+      return (
+        currentCapsule?.type ===
+          'SHARED' &&
+        currentCapsule.role ===
           'OWNER' &&
         currentCapsule.status ===
           'COLLECTING'
@@ -497,6 +535,79 @@ export class CapsuleDetailPage
       });
   }
 
+  generateInvitation(): void {
+    const currentCapsule =
+      this.capsule();
+
+    if (
+      !currentCapsule ||
+      !this.canInvite() ||
+      this.invitationLoading()
+    ) {
+      return;
+    }
+
+    this.invitationLoading.set(
+      true,
+    );
+
+    this.invitationError.set(
+      null,
+    );
+
+    this.invitationCopied.set(
+      false,
+    );
+
+    this.capsuleService
+      .createInvitation(
+        currentCapsule.id,
+      )
+      .pipe(
+        finalize(() => {
+          this.invitationLoading.set(
+            false,
+          );
+        }),
+      )
+      .subscribe({
+        next: (response) => {
+          this.invitationUrl.set(
+            `${window.location.origin}/invitations/${response.token}`,
+          );
+        },
+
+        error: () => {
+          this.invitationError.set(
+            'No se ha podido generar la invitación.',
+          );
+        },
+      });
+  }
+
+  async copyInvitation():
+    Promise<void> {
+    const url =
+      this.invitationUrl();
+
+    if (!url) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard
+        .writeText(url);
+
+      this.invitationCopied.set(
+        true,
+      );
+    } catch {
+      this.invitationError.set(
+        'No se ha podido copiar el enlace.',
+      );
+    }
+  }
+
   backToDashboard(): void {
     void this.router.navigate([
       '/dashboard',
@@ -599,11 +710,57 @@ export class CapsuleDetailPage
           this.capsule.set(
             capsule,
           );
+
+          if (
+            capsule.type ===
+            'SHARED'
+          ) {
+            this.loadParticipants(
+              capsule.id,
+            );
+          } else {
+            this.participants.set(
+              [],
+            );
+          }
         },
 
         error: () => {
           this.loadError.set(
             'No se ha podido cargar la cápsula.',
+          );
+        },
+      });
+  }
+
+  private loadParticipants(
+    capsuleId: string,
+  ): void {
+    this.participantsLoading.set(
+      true,
+    );
+
+    this.capsuleService
+      .getParticipants(
+        capsuleId,
+      )
+      .pipe(
+        finalize(() => {
+          this.participantsLoading.set(
+            false,
+          );
+        }),
+      )
+      .subscribe({
+        next: (participants) => {
+          this.participants.set(
+            participants,
+          );
+        },
+
+        error: () => {
+          this.participants.set(
+            [],
           );
         },
       });

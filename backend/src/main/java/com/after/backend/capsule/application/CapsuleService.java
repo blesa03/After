@@ -4,6 +4,7 @@ import com.after.backend.capsule.api.dto.CapsuleDetailResponse;
 import com.after.backend.capsule.api.dto.CapsuleSummaryResponse;
 import com.after.backend.capsule.api.dto.CreateCapsuleRequest;
 import com.after.backend.capsule.api.dto.UpdateCapsuleRequest;
+import com.after.backend.capsule.api.dto.CapsuleParticipantResponse;
 import com.after.backend.capsule.domain.Capsule;
 import com.after.backend.capsule.domain.CapsuleMember;
 import com.after.backend.capsule.domain.CapsuleMemberRole;
@@ -162,5 +163,25 @@ public class CapsuleService {
                     "timezone must be a valid zone ID"
             );
         }
+    }
+    @Transactional(readOnly = true)
+        public List<CapsuleParticipantResponse> listParticipants(
+                User user,
+                UUID capsuleId
+        ) {
+        if (
+                !capsuleMemberRepository.existsByCapsuleIdAndUserId(
+                        capsuleId,
+                        user.getId()
+                )
+        ) {
+                throw new CapsuleNotFoundException();
+        }
+
+        return capsuleMemberRepository
+                .findAllByCapsuleId(capsuleId)
+                .stream()
+                .map(CapsuleParticipantResponse::from)
+                .toList();
     }
 }

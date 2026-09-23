@@ -7,6 +7,16 @@ export const routes: Routes = [
   ...AUTH_ROUTES,
 
   {
+    path: 'invitations/:token',
+    loadComponent: () =>
+      import(
+        './capsules/pages/invitation/invitation'
+      ).then(
+        (m) => m.InvitationPage,
+      ),
+  },
+
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -26,8 +36,6 @@ export const routes: Routes = [
             './dashboard/pages/dashboard/dashboard'
           ).then((m) => m.Dashboard),
       },
-      
-       
       {
         path: 'capsules',
         loadChildren: () =>

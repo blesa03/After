@@ -15,6 +15,7 @@ import { vi } from 'vitest';
 
 import {
   CapsuleDetail,
+  CapsuleParticipant,
 } from '../../models/capsule.models';
 import { CapsuleService } from '../../services/capsule.service';
 import { CapsuleDetailPage } from './capsule-detail';
@@ -31,6 +32,12 @@ describe('CapsuleDetailPage', () => {
       ReturnType<typeof vi.fn>;
 
     updateCapsule:
+      ReturnType<typeof vi.fn>;
+
+    getParticipants:
+      ReturnType<typeof vi.fn>;
+
+    createInvitation:
       ReturnType<typeof vi.fn>;
   };
 
@@ -81,12 +88,49 @@ describe('CapsuleDetailPage', () => {
         'OWNER',
     };
 
+  const sharedOwner:
+    CapsuleDetail = {
+      ...collectingOwner,
+      type:
+        'SHARED',
+    };
+
+  const participants:
+    CapsuleParticipant[] = [
+      {
+        email:
+          'owner@example.com',
+
+        role:
+          'OWNER',
+
+        joinedAt:
+          '2026-09-20T10:00:00Z',
+      },
+      {
+        email:
+          'contributor@example.com',
+
+        role:
+          'CONTRIBUTOR',
+
+        joinedAt:
+          '2026-09-21T10:00:00Z',
+      },
+    ];
+
   beforeEach(async () => {
     capsuleServiceSpy = {
       getCapsule:
         vi.fn(),
 
       updateCapsule:
+        vi.fn(),
+
+      getParticipants:
+        vi.fn(),
+
+      createInvitation:
         vi.fn(),
     };
 
@@ -101,6 +145,12 @@ describe('CapsuleDetailPage', () => {
         of(
           collectingOwner,
         ),
+      );
+
+    capsuleServiceSpy
+      .getParticipants
+      .mockReturnValue(
+        of(participants),
       );
 
     await TestBed
@@ -155,6 +205,7 @@ describe('CapsuleDetailPage', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   function render(): void {
@@ -396,30 +447,70 @@ describe('CapsuleDetailPage', () => {
     );
   });
 
-  it('should render participants only for shared capsules', () => {
+  it('should load participants for a shared capsule', () => {
     capsuleServiceSpy
       .getCapsule
       .mockReturnValue(
-        of({
-          ...collectingOwner,
-
-          type:
-            'SHARED',
-        }),
+        of(sharedOwner),
       );
 
     render();
 
     expect(
-      fixture.nativeElement
-        .textContent,
-    ).toContain(
-      'Participantes',
+      capsuleServiceSpy
+        .getParticipants,
+    ).toHaveBeenCalledWith(
+      'capsule-123',
+    );
+
+    expect(
+      component.participants(),
+    ).toEqual(
+      participants,
     );
   });
 
-  it('should not render participants for personal capsules', () => {
+  it('should render shared capsule participants', () => {
+    capsuleServiceSpy
+      .getCapsule
+      .mockReturnValue(
+        of(sharedOwner),
+      );
+
     render();
+
+    const text =
+      fixture.nativeElement
+        .textContent;
+
+    expect(text).toContain(
+      'Participantes',
+    );
+
+    expect(text).toContain(
+      'owner@example.com',
+    );
+
+    expect(text).toContain(
+      'contributor@example.com',
+    );
+
+    expect(text).toContain(
+      'Propietario',
+    );
+
+    expect(text).toContain(
+      'Colaborador',
+    );
+  });
+
+  it('should not load participants for a personal capsule', () => {
+    render();
+
+    expect(
+      capsuleServiceSpy
+        .getParticipants,
+    ).not.toHaveBeenCalled();
 
     expect(
       fixture.nativeElement
@@ -427,6 +518,244 @@ describe('CapsuleDetailPage', () => {
     ).not.toContain(
       'Participantes',
     );
+  });
+
+  it('should clear participants when loading participants fails', () => {
+    capsuleServiceSpy
+      .getCapsule
+      .mockReturnValue(
+        of(sharedOwner),
+      );
+
+    capsuleServiceSpy
+      .getParticipants
+      .mockReturnValue(
+        throwError(
+          () =>
+            new Error(
+              'Participants failed',
+            ),
+        ),
+      );
+
+    render();
+
+    expect(
+      component.participants(),
+    ).toEqual([]);
+
+    expect(
+      component.participantsLoading(),
+    ).toBe(false);
+  });
+
+  it('should allow a collecting shared owner to invite participants', () => {
+    capsuleServiceSpy
+      .getCapsule
+      .mockReturnValue(
+        of(sharedOwner),
+      );
+
+    render();
+
+    expect(
+      component.canInvite(),
+    ).toBe(true);
+
+    expect(
+      fixture.nativeElement
+        .textContent,
+    ).toContain(
+      'Generar invitación',
+    );
+  });
+
+  it('should not allow a contributor to generate invitations', () => {
+    capsuleServiceSpy
+      .getCapsule
+      .mockReturnValue(
+        of({
+          ...sharedOwner,
+
+          role:
+            'CONTRIBUTOR',
+        }),
+      );
+
+    render();
+
+    expect(
+      component.canInvite(),
+    ).toBe(false);
+
+    expect(
+      fixture.nativeElement
+        .textContent,
+    ).not.toContain(
+      'Generar invitación',
+    );
+  });
+
+  it('should not allow invitations for a personal capsule', () => {
+    render();
+
+    expect(
+      component.canInvite(),
+    ).toBe(false);
+
+    expect(
+      fixture.nativeElement
+        .textContent,
+    ).not.toContain(
+      'Generar invitación',
+    );
+  });
+
+  it('should not allow invitations for a sealed shared capsule', () => {
+    capsuleServiceSpy
+      .getCapsule
+      .mockReturnValue(
+        of({
+          ...sharedOwner,
+
+          status:
+            'SEALED',
+        }),
+      );
+
+    render();
+
+    expect(
+      component.canInvite(),
+    ).toBe(false);
+
+    expect(
+      fixture.nativeElement
+        .textContent,
+    ).not.toContain(
+      'Generar invitación',
+    );
+  });
+
+  it('should generate an invitation URL', () => {
+    capsuleServiceSpy
+      .getCapsule
+      .mockReturnValue(
+        of(sharedOwner),
+      );
+
+    capsuleServiceSpy
+      .createInvitation
+      .mockReturnValue(
+        of({
+          token:
+            'invitation-token',
+        }),
+      );
+
+    render();
+
+    component.generateInvitation();
+
+    expect(
+      capsuleServiceSpy
+        .createInvitation,
+    ).toHaveBeenCalledWith(
+      'capsule-123',
+    );
+
+    expect(
+      component.invitationUrl(),
+    ).toBe(
+      `${window.location.origin}/invitations/invitation-token`,
+    );
+
+    expect(
+      component.invitationLoading(),
+    ).toBe(false);
+  });
+
+  it('should show an error when invitation generation fails', () => {
+    capsuleServiceSpy
+      .getCapsule
+      .mockReturnValue(
+        of(sharedOwner),
+      );
+
+    capsuleServiceSpy
+      .createInvitation
+      .mockReturnValue(
+        throwError(
+          () =>
+            new Error(
+              'Invitation failed',
+            ),
+        ),
+      );
+
+    render();
+
+    component.generateInvitation();
+
+    expect(
+      component.invitationError(),
+    ).toContain(
+      'No se ha podido generar',
+    );
+
+    expect(
+      component.invitationLoading(),
+    ).toBe(false);
+  });
+
+  it('should copy the generated invitation URL', async () => {
+    capsuleServiceSpy
+      .getCapsule
+      .mockReturnValue(
+        of(sharedOwner),
+      );
+
+    capsuleServiceSpy
+      .createInvitation
+      .mockReturnValue(
+        of({
+          token:
+            'invitation-token',
+        }),
+      );
+
+    const writeText =
+      vi.fn()
+        .mockResolvedValue(
+          undefined,
+        );
+
+    Object.defineProperty(
+      navigator,
+      'clipboard',
+      {
+        configurable: true,
+        value: {
+          writeText,
+        },
+      },
+    );
+
+    render();
+
+    component.generateInvitation();
+
+    await component.copyInvitation();
+
+    expect(
+      writeText,
+    ).toHaveBeenCalledWith(
+      `${window.location.origin}/invitations/invitation-token`,
+    );
+
+    expect(
+      component.invitationCopied(),
+    ).toBe(true);
   });
 
   it('should move the edit date to tomorrow when a past time is selected for today', () => {
