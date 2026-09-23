@@ -5,6 +5,7 @@ import com.after.backend.capsule.api.dto.CapsuleDetailResponse;
 import com.after.backend.capsule.api.dto.CapsuleSummaryResponse;
 import com.after.backend.capsule.api.dto.CreateCapsuleRequest;
 import com.after.backend.capsule.api.dto.UpdateCapsuleRequest;
+import com.after.backend.capsule.api.dto.CapsuleParticipantResponse;
 import com.after.backend.capsule.application.CapsuleService;
 import com.after.backend.user.domain.User;
 import jakarta.validation.Valid;
@@ -93,6 +94,20 @@ public class CapsuleController {
                 authService.currentUser(jwt.getSubject());
 
         return capsuleService.getFor(
+                currentUser,
+                capsuleId
+        );
+    }
+
+    @GetMapping("/{capsuleId}/participants")
+        public List<CapsuleParticipantResponse> participants(
+                @PathVariable UUID capsuleId,
+                @AuthenticationPrincipal Jwt jwt
+        ) {
+        User currentUser =
+                authService.currentUser(jwt.getSubject());
+
+        return capsuleService.listParticipants(
                 currentUser,
                 capsuleId
         );

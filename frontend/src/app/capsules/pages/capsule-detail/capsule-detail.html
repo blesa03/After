@@ -17,7 +17,9 @@
         </p>
       </section>
     } @else if (loadError()) {
-      <section class="error-card rounded-xl border p-6">
+      <section
+        class="error-card rounded-xl border p-6"
+      >
         <h1 class="mb-2 text-xl font-bold">
           No se pudo cargar la cápsula
         </h1>
@@ -26,7 +28,10 @@
           {{ loadError() }}
         </p>
       </section>
-    } @else if (capsule(); as currentCapsule) {
+    } @else if (
+      capsule();
+      as currentCapsule
+    ) {
       <section
         class="detail-card detail-card-accent mb-6 rounded-2xl border p-6"
       >
@@ -39,45 +44,85 @@
             >
               <span
                 class="badge rounded-full border px-3 py-1 text-xs font-semibold"
-                [class.badge-personal]="currentCapsule.type === 'PERSONAL'"
-                [class.badge-shared]="currentCapsule.type === 'SHARED'"
+                [class.badge-personal]="
+                  currentCapsule.type ===
+                  'PERSONAL'
+                "
+                [class.badge-shared]="
+                  currentCapsule.type ===
+                  'SHARED'
+                "
               >
-                {{ typeLabel(currentCapsule.type) }}
+                {{
+                  typeLabel(
+                    currentCapsule.type
+                  )
+                }}
               </span>
 
               <span
                 class="badge rounded-full border px-3 py-1 text-xs font-semibold"
-                [class.badge-collecting]="currentCapsule.status === 'COLLECTING'"
-                [class.badge-sealed]="currentCapsule.status === 'SEALED'"
-                [class.badge-opened]="currentCapsule.status === 'OPENED'"
+                [class.badge-collecting]="
+                  currentCapsule.status ===
+                  'COLLECTING'
+                "
+                [class.badge-sealed]="
+                  currentCapsule.status ===
+                  'SEALED'
+                "
+                [class.badge-opened]="
+                  currentCapsule.status ===
+                  'OPENED'
+                "
               >
-                {{ statusLabel(currentCapsule.status) }}
+                {{
+                  statusLabel(
+                    currentCapsule.status
+                  )
+                }}
               </span>
 
               <span
                 class="badge rounded-full border px-3 py-1 text-xs font-semibold"
-                [class.badge-owner]="currentCapsule.role === 'OWNER'"
-                [class.badge-contributor]="currentCapsule.role === 'CONTRIBUTOR'"
+                [class.badge-owner]="
+                  currentCapsule.role ===
+                  'OWNER'
+                "
+                [class.badge-contributor]="
+                  currentCapsule.role ===
+                  'CONTRIBUTOR'
+                "
               >
-                {{ roleLabel(currentCapsule.role) }}
+                {{
+                  roleLabel(
+                    currentCapsule.role
+                  )
+                }}
               </span>
             </div>
 
-            <h1 class="text-3xl font-bold text-slate-900">
+            <h1
+              class="text-3xl font-bold text-slate-900"
+            >
               {{ currentCapsule.title }}
             </h1>
 
-            @if (currentCapsule.description) {
+            @if (
+              currentCapsule.description
+            ) {
               <p
                 class="mt-3 whitespace-pre-line text-slate-600"
               >
-                {{ currentCapsule.description }}
+                {{
+                  currentCapsule.description
+                }}
               </p>
             } @else {
               <p
                 class="mt-3 text-sm italic text-slate-400"
               >
-                Esta cápsula no tiene descripción.
+                Esta cápsula no tiene
+                descripción.
               </p>
             }
           </div>
@@ -98,7 +143,8 @@
       </section>
 
       @if (
-        currentCapsule.status === 'COLLECTING'
+        currentCapsule.status ===
+        'COLLECTING'
       ) {
         <section
           class="countdown-box mb-6 rounded-2xl border p-6"
@@ -112,20 +158,28 @@
           <p
             class="mt-1 text-3xl font-bold text-slate-900"
           >
-            {{ getCountdown(currentCapsule.opensAt) }}
+            {{
+              getCountdown(
+                currentCapsule.opensAt
+              )
+            }}
           </p>
 
           <p
             class="mt-2 text-sm text-slate-500"
           >
             Apertura:
-            {{ currentCapsule.opensAt | date:'medium' }}
+            {{
+              currentCapsule.opensAt
+                | date:'medium'
+            }}
           </p>
         </section>
       }
 
       @if (
-        currentCapsule.status === 'SEALED'
+        currentCapsule.status ===
+        'SEALED'
       ) {
         <section
           class="sealed-card mb-6 rounded-xl border p-6"
@@ -135,14 +189,16 @@
           </h2>
 
           <p class="mt-2 text-sm">
-            La cápsula ya no puede modificarse y
-            permanecerá cerrada hasta su apertura.
+            La cápsula ya no puede
+            modificarse y permanecerá
+            cerrada hasta su apertura.
           </p>
         </section>
       }
 
       @if (
-        currentCapsule.status === 'OPENED'
+        currentCapsule.status ===
+        'OPENED'
       ) {
         <section
           class="opened-card mb-6 rounded-xl border p-6"
@@ -152,8 +208,8 @@
           </h2>
 
           <p class="mt-2 text-sm">
-            Esta cápsula ya ha alcanzado su fecha
-            de apertura.
+            Esta cápsula ya ha alcanzado
+            su fecha de apertura.
           </p>
         </section>
       }
@@ -176,7 +232,11 @@
             </dt>
 
             <dd class="detail-value">
-              {{ typeLabel(currentCapsule.type) }}
+              {{
+                typeLabel(
+                  currentCapsule.type
+                )
+              }}
             </dd>
           </div>
 
@@ -186,7 +246,11 @@
             </dt>
 
             <dd class="detail-value">
-              {{ statusLabel(currentCapsule.status) }}
+              {{
+                statusLabel(
+                  currentCapsule.status
+                )
+              }}
             </dd>
           </div>
 
@@ -196,7 +260,11 @@
             </dt>
 
             <dd class="detail-value">
-              {{ roleLabel(currentCapsule.role) }}
+              {{
+                roleLabel(
+                  currentCapsule.role
+                )
+              }}
             </dd>
           </div>
 
@@ -206,7 +274,9 @@
             </dt>
 
             <dd class="detail-value">
-              {{ currentCapsule.timezone }}
+              {{
+                currentCapsule.timezone
+              }}
             </dd>
           </div>
 
@@ -216,7 +286,10 @@
             </dt>
 
             <dd class="detail-value">
-              {{ currentCapsule.opensAt | date:'full' }}
+              {{
+                currentCapsule.opensAt
+                  | date:'full'
+              }}
             </dd>
           </div>
         </dl>
@@ -238,44 +311,188 @@
             <p
               class="mt-2 text-sm text-slate-500"
             >
-              Las contribuciones estarán disponibles
-              en una próxima tarea.
+              Las contribuciones estarán
+              disponibles en una próxima
+              tarea.
             </p>
           </div>
 
-          <span class="placeholder-pill">
+          <span
+            class="placeholder-pill"
+          >
             Próximamente
           </span>
         </div>
       </section>
 
       @if (
-        currentCapsule.type === 'SHARED'
+        currentCapsule.type ===
+        'SHARED'
       ) {
         <section
           class="detail-card rounded-xl border p-6"
         >
           <div
-            class="flex items-center justify-between gap-4"
+            class="flex flex-col gap-5"
           >
-            <div>
-              <h2
-                class="text-lg font-bold text-slate-900"
-              >
-                Participantes
-              </h2>
+            <div
+              class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+            >
+              <div>
+                <h2
+                  class="text-lg font-bold text-slate-900"
+                >
+                  Participantes
+                </h2>
 
-              <p
-                class="mt-2 text-sm text-slate-500"
-              >
-                La gestión de participantes estará
-                disponible en una próxima tarea.
-              </p>
+                <p
+                  class="mt-1 text-sm text-slate-500"
+                >
+                  Personas que forman parte
+                  de esta cápsula.
+                </p>
+              </div>
+
+              @if (canInvite()) {
+                <button
+                  type="button"
+                  class="edit-button rounded-lg px-4 py-2.5 text-sm font-semibold"
+                  [disabled]="
+                    invitationLoading()
+                  "
+                  (click)="
+                    generateInvitation()
+                  "
+                >
+                  @if (
+                    invitationLoading()
+                  ) {
+                    Generando...
+                  } @else {
+                    Generar invitación
+                  }
+                </button>
+              }
             </div>
 
-            <span class="placeholder-pill">
-              Próximamente
-            </span>
+            @if (invitationUrl()) {
+              <div
+                class="rounded-xl border border-indigo-200 bg-indigo-50 p-4"
+              >
+                <p
+                  class="mb-2 text-sm font-semibold text-indigo-900"
+                >
+                  Enlace de invitación
+                </p>
+
+                <div
+                  class="flex flex-col gap-2 sm:flex-row"
+                >
+                  <input
+                    type="text"
+                    readonly
+                    class="form-control flex-1"
+                    [value]="
+                      invitationUrl()
+                    "
+                  />
+
+                  <button
+                    type="button"
+                    class="save-button rounded-lg px-4 py-2.5 font-semibold"
+                    (click)="
+                      copyInvitation()
+                    "
+                  >
+                    @if (
+                      invitationCopied()
+                    ) {
+                      Copiado
+                    } @else {
+                      Copiar
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (
+              invitationError()
+            ) {
+              <div class="api-error">
+                {{
+                  invitationError()
+                }}
+              </div>
+            }
+
+            @if (
+              participantsLoading()
+            ) {
+              <p
+                class="text-sm text-slate-500"
+              >
+                Cargando participantes...
+              </p>
+            } @else {
+              <div
+                class="divide-y divide-slate-100"
+              >
+                @for (
+                  participant
+                    of participants();
+                  track participant.email
+                ) {
+                  <div
+                    class="flex flex-col gap-2 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p
+                        class="font-semibold text-slate-900"
+                      >
+                        {{
+                          participant.email
+                        }}
+                      </p>
+
+                      <p
+                        class="mt-1 text-xs text-slate-500"
+                      >
+                        Se unió
+                        {{
+                          participant.joinedAt
+                            | date:'medium'
+                        }}
+                      </p>
+                    </div>
+
+                    <span
+                      class="badge rounded-full border px-3 py-1 text-xs font-semibold"
+                      [class.badge-owner]="
+                        participant.role ===
+                        'OWNER'
+                      "
+                      [class.badge-contributor]="
+                        participant.role ===
+                        'CONTRIBUTOR'
+                      "
+                    >
+                      {{
+                        roleLabel(
+                          participant.role
+                        )
+                      }}
+                    </span>
+                  </div>
+                } @empty {
+                  <p
+                    class="text-sm text-slate-500"
+                  >
+                    No hay participantes.
+                  </p>
+                }
+              </div>
+            }
           </div>
         </section>
       }
@@ -291,7 +508,9 @@
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-capsule-title"
-            (click)="$event.stopPropagation()"
+            (click)="
+              $event.stopPropagation()
+            "
           >
             <div
               class="mb-5 flex items-start justify-between gap-4"
@@ -313,8 +532,8 @@
                 <p
                   class="mt-1 text-sm text-slate-500"
                 >
-                  Actualiza la configuración antes
-                  de sellarla.
+                  Actualiza la configuración
+                  antes de sellarla.
                 </p>
               </div>
 
@@ -350,12 +569,17 @@
                 />
 
                 @if (
-                  editForm.get('title')?.invalid &&
-                  editForm.get('title')?.touched
+                  editForm
+                    .get('title')
+                    ?.invalid &&
+                  editForm
+                    .get('title')
+                    ?.touched
                 ) {
                   <p class="form-error">
-                    El título es obligatorio y no
-                    puede superar los 255 caracteres.
+                    El título es obligatorio y
+                    no puede superar los 255
+                    caracteres.
                   </p>
                 }
               </div>
@@ -392,7 +616,9 @@
                     type="date"
                     formControlName="date"
                     [min]="minDate"
-                    (change)="onEditDateChange()"
+                    (change)="
+                      onEditDateChange()
+                    "
                     class="form-control"
                   />
                 </div>
@@ -409,22 +635,31 @@
                     id="edit-capsule-time"
                     type="time"
                     formControlName="time"
-                    (change)="onEditTimeChange()"
+                    (change)="
+                      onEditTimeChange()
+                    "
                     class="form-control"
                   />
                 </div>
               </div>
 
               @if (
-                editForm.hasError('notFuture') &&
+                editForm.hasError(
+                  'notFuture'
+                ) &&
                 (
-                  editForm.get('date')?.touched ||
-                  editForm.get('time')?.touched
+                  editForm
+                    .get('date')
+                    ?.touched ||
+                  editForm
+                    .get('time')
+                    ?.touched
                 )
               ) {
                 <p class="form-error">
-                  La fecha y hora de apertura deben
-                  estar en el futuro.
+                  La fecha y hora de
+                  apertura deben estar en
+                  el futuro.
                 </p>
               }
 
@@ -442,10 +677,13 @@
                   class="form-control"
                 >
                   @for (
-                    timezone of timezones;
+                    timezone
+                      of timezones;
                     track timezone
                   ) {
-                    <option [value]="timezone">
+                    <option
+                      [value]="timezone"
+                    >
                       {{ timezone }}
                     </option>
                   }
@@ -465,7 +703,9 @@
                   type="button"
                   class="cancel-button rounded-lg px-4 py-2.5 font-semibold"
                   [disabled]="isSaving()"
-                  (click)="cancelEditing()"
+                  (click)="
+                    cancelEditing()
+                  "
                 >
                   Cancelar
                 </button>

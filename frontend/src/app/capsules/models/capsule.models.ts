@@ -50,3 +50,24 @@ export interface UpdateCapsuleRequest {
   opensAt: string;
   timezone: string;
 }
+
+export interface CapsuleParticipant {
+  email: string;
+  role: CapsuleRole;
+  joinedAt: string;
+}
+
+export interface InvitationCreated {
+  token: string;
+}
+
+export interface InvitationPreview {
+  capsuleTitle: string;
+  ownerEmail: string;
+  opensAt: string;
+}
+
+export interface InvitationAccepted {
+  capsuleId: string;
+  role: 'CONTRIBUTOR';
+}

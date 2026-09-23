@@ -10,6 +10,10 @@ import {
   CapsuleSummary,
   CreateCapsuleRequest,
   UpdateCapsuleRequest,
+  CapsuleParticipant,
+  InvitationAccepted,
+  InvitationCreated,
+  InvitationPreview,
 } from '../models/capsule.models';
 
 @Injectable({
@@ -49,6 +53,40 @@ export class CapsuleService {
     return this.http.put<CapsuleDetail>(
       `${this.apiBaseUrl}/capsules/${id}`,
       payload,
+    );
+  }
+
+  getParticipants(
+    capsuleId: string,
+  ) {
+    return this.http.get<CapsuleParticipant[]>(
+      `${this.apiBaseUrl}/capsules/${capsuleId}/participants`,
+    );
+  }
+
+  createInvitation(
+    capsuleId: string,
+  ) {
+    return this.http.post<InvitationCreated>(
+      `${this.apiBaseUrl}/capsules/${capsuleId}/invitations`,
+      null,
+    );
+  }
+
+  getInvitation(
+    token: string,
+  ) {
+    return this.http.get<InvitationPreview>(
+      `${this.apiBaseUrl}/invitations/${encodeURIComponent(token)}`,
+    );
+  }
+
+  acceptInvitation(
+    token: string,
+  ) {
+    return this.http.post<InvitationAccepted>(
+      `${this.apiBaseUrl}/invitations/${encodeURIComponent(token)}/accept`,
+      null,
     );
   }
 }

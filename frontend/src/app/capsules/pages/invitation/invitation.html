@@ -1,0 +1,137 @@
+<div
+  class="invitation-shell flex min-h-screen items-center justify-center p-4"
+>
+  <main class="w-full max-w-lg">
+    @if (isLoading()) {
+      <section
+        class="invitation-card rounded-2xl border p-8 text-center"
+      >
+        <p class="text-slate-500">
+          Cargando invitación...
+        </p>
+      </section>
+    } @else if (
+      errorMessage() &&
+      !invitation()
+    ) {
+      <section
+        class="invitation-card rounded-2xl border p-8 text-center"
+      >
+        <p
+          class="text-sm font-semibold text-red-600"
+        >
+          Invitación no disponible
+        </p>
+
+        <h1
+          class="mt-2 text-2xl font-bold text-slate-900"
+        >
+          No puedes usar este enlace
+        </h1>
+
+        <p class="mt-3 text-slate-600">
+          {{ errorMessage() }}
+        </p>
+
+        <a
+          routerLink="/dashboard"
+          class="primary-link mt-6 inline-block rounded-lg px-5 py-2.5 font-semibold"
+        >
+          Ir a After
+        </a>
+      </section>
+    } @else if (
+      invitation();
+      as currentInvitation
+    ) {
+      <section
+        class="invitation-card rounded-2xl border p-6 sm:p-8"
+      >
+        <p
+          class="text-sm font-semibold text-indigo-600"
+        >
+          Invitación a una cápsula
+        </p>
+
+        <h1
+          class="mt-2 text-3xl font-bold text-slate-900"
+        >
+          {{ currentInvitation.capsuleTitle }}
+        </h1>
+
+        <p class="mt-3 text-slate-600">
+          {{ currentInvitation.ownerEmail }}
+          te invita a participar en esta
+          cápsula compartida.
+        </p>
+
+        <div
+          class="opening-box mt-6 rounded-xl border p-4"
+        >
+          <p
+            class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+          >
+            Fecha de apertura
+          </p>
+
+          <p
+            class="mt-1 font-semibold text-slate-900"
+          >
+            {{
+              currentInvitation.opensAt
+                | date:'full'
+            }}
+          </p>
+        </div>
+
+        @if (errorMessage()) {
+          <div
+            class="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
+            {{ errorMessage() }}
+          </div>
+        }
+
+        @if (
+          authService.isAuthenticated()
+        ) {
+          <button
+            type="button"
+            class="accept-button mt-6 w-full rounded-lg px-4 py-3 font-semibold"
+            [disabled]="isAccepting()"
+            (click)="accept()"
+          >
+            @if (isAccepting()) {
+              Aceptando invitación...
+            } @else {
+              Unirme a la cápsula
+            }
+          </button>
+        } @else {
+          <div class="mt-6">
+            <p
+              class="mb-4 text-center text-sm text-slate-600"
+            >
+              Inicia sesión o crea una cuenta
+              para aceptar la invitación.
+            </p>
+
+            <a
+              [href]="loginUrl()"
+              class="primary-link block rounded-lg px-4 py-3 text-center font-semibold"
+            >
+              Iniciar sesión
+            </a>
+
+            <a
+              [href]="registerUrl()"
+              class="secondary-link mt-3 block rounded-lg px-4 py-3 text-center font-semibold"
+            >
+              Crear cuenta
+            </a>
+          </div>
+        }
+      </section>
+    }
+  </main>
+</div>

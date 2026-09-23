@@ -10,14 +10,19 @@ import {
   Validators,
 } from '@angular/forms';
 import {
+  ActivatedRoute,
   Router,
   RouterLink,
 } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../services/auth.service';
-import { registerErrorMessage } from '../../utils/auth-errors';
-import { passwordsMatchValidator } from '../../validators/passwords-match.validator';
+import {
+  registerErrorMessage,
+} from '../../utils/auth-errors';
+import {
+  passwordsMatchValidator,
+} from '../../validators/passwords-match.validator';
 
 @Component({
   selector: 'app-register',
@@ -27,48 +32,65 @@ import { passwordsMatchValidator } from '../../validators/passwords-match.valida
   ],
   templateUrl: './register.html',
   styleUrl: './register.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection:
+    ChangeDetectionStrategy.OnPush,
 })
 export class Register {
-  private readonly formBuilder = inject(FormBuilder);
-  private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
+  private readonly formBuilder =
+    inject(FormBuilder);
 
-  readonly isSubmitting = signal(false);
-  readonly errorMessage = signal<string | null>(null);
+  private readonly authService =
+    inject(AuthService);
 
-  readonly form = this.formBuilder.nonNullable.group(
-    {
-      email: [
-        '',
-        [
-          Validators.required,
-          Validators.email,
-          Validators.maxLength(320),
+  private readonly router =
+    inject(Router);
+
+  private readonly route =
+    inject(ActivatedRoute);
+
+  readonly isSubmitting =
+    signal(false);
+
+  readonly errorMessage =
+    signal<string | null>(null);
+
+  readonly form =
+    this.formBuilder.nonNullable.group(
+      {
+        email: [
+          '',
+          [
+            Validators.required,
+            Validators.email,
+            Validators.maxLength(320),
+          ],
         ],
-      ],
-      password: [
-        '',
-        [
-          Validators.required,
-          Validators.minLength(8),
-          Validators.maxLength(72),
+        password: [
+          '',
+          [
+            Validators.required,
+            Validators.minLength(8),
+            Validators.maxLength(72),
+          ],
         ],
-      ],
-      confirmPassword: [
-        '',
-        [
-          Validators.required,
+        confirmPassword: [
+          '',
+          [
+            Validators.required,
+          ],
         ],
-      ],
-    },
-    {
-      validators: passwordsMatchValidator,
-    },
-  );
+      },
+      {
+        validators:
+          passwordsMatchValidator,
+      },
+    );
 
   submit(): void {
-    if (this.form.invalid || this.isSubmitting()) {
+    if (
+      this.form.invalid ||
+      this.isSubmitting()
+    ) {
       this.form.markAllAsTouched();
       return;
     }
@@ -92,7 +114,7 @@ export class Register {
       .subscribe({
         next: () => {
           void this.router.navigateByUrl(
-            '/dashboard',
+            this.getReturnUrl(),
           );
         },
         error: (error: unknown) => {
@@ -101,5 +123,22 @@ export class Register {
           );
         },
       });
+  }
+
+  private getReturnUrl(): string {
+    const returnUrl =
+      this.route.snapshot.queryParamMap.get(
+        'returnUrl',
+      );
+
+    if (
+      returnUrl !== null &&
+      returnUrl.startsWith('/') &&
+      !returnUrl.startsWith('//')
+    ) {
+      return returnUrl;
+    }
+
+    return '/dashboard';
   }
 }
