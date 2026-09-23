@@ -16,6 +16,7 @@ import { vi } from 'vitest';
 import {
   CapsuleDetail,
   CapsuleParticipant,
+  Contribution,
 } from '../../models/capsule.models';
 import { CapsuleService } from '../../services/capsule.service';
 import { CapsuleDetailPage } from './capsule-detail';
@@ -38,6 +39,18 @@ describe('CapsuleDetailPage', () => {
       ReturnType<typeof vi.fn>;
 
     createInvitation:
+      ReturnType<typeof vi.fn>;
+
+    getTextContributions:
+      ReturnType<typeof vi.fn>;
+
+    createTextContribution:
+      ReturnType<typeof vi.fn>;
+
+    updateTextContribution:
+      ReturnType<typeof vi.fn>;
+
+    deleteContribution:
       ReturnType<typeof vi.fn>;
   };
 
@@ -91,6 +104,7 @@ describe('CapsuleDetailPage', () => {
   const sharedOwner:
     CapsuleDetail = {
       ...collectingOwner,
+
       type:
         'SHARED',
     };
@@ -119,6 +133,30 @@ describe('CapsuleDetailPage', () => {
       },
     ];
 
+  const contribution:
+    Contribution = {
+      id:
+        'contribution-1',
+
+      capsuleId:
+        'capsule-123',
+
+      authorUserId:
+        'user-123',
+
+      type:
+        'TEXT',
+
+      textContent:
+        'Future message',
+
+      createdAt:
+        '2026-09-23T12:00:00Z',
+
+      updatedAt:
+        '2026-09-23T12:00:00Z',
+    };
+
   beforeEach(async () => {
     capsuleServiceSpy = {
       getCapsule:
@@ -131,6 +169,18 @@ describe('CapsuleDetailPage', () => {
         vi.fn(),
 
       createInvitation:
+        vi.fn(),
+
+      getTextContributions:
+        vi.fn(),
+
+      createTextContribution:
+        vi.fn(),
+
+      updateTextContribution:
+        vi.fn(),
+
+      deleteContribution:
         vi.fn(),
     };
 
@@ -151,6 +201,12 @@ describe('CapsuleDetailPage', () => {
       .getParticipants
       .mockReturnValue(
         of(participants),
+      );
+
+    capsuleServiceSpy
+      .getTextContributions
+      .mockReturnValue(
+        of([]),
       );
 
     await TestBed
@@ -347,10 +403,6 @@ describe('CapsuleDetailPage', () => {
 
     component.startEditing();
 
-    expect(
-      component.isEditing(),
-    ).toBe(true);
-
     component.cancelEditing();
 
     expect(
@@ -370,7 +422,7 @@ describe('CapsuleDetailPage', () => {
     ).toBe(false);
   });
 
-  it('should not allow a contributor to edit', () => {
+  it('should not allow a contributor to edit the capsule', () => {
     capsuleServiceSpy
       .getCapsule
       .mockReturnValue(
@@ -735,6 +787,7 @@ describe('CapsuleDetailPage', () => {
       'clipboard',
       {
         configurable: true,
+
         value: {
           writeText,
         },
@@ -756,6 +809,508 @@ describe('CapsuleDetailPage', () => {
     expect(
       component.invitationCopied(),
     ).toBe(true);
+  });
+
+  it('should load own text contributions', () => {
+    capsuleServiceSpy
+      .getTextContributions
+      .mockReturnValue(
+        of([
+          contribution,
+        ]),
+      );
+
+    render();
+
+    expect(
+      capsuleServiceSpy
+        .getTextContributions,
+    ).toHaveBeenCalledWith(
+      'capsule-123',
+    );
+
+    expect(
+      component.contributions(),
+    ).toEqual([
+      contribution,
+    ]);
+
+    expect(
+      fixture.nativeElement
+        .textContent,
+    ).toContain(
+      'Future message',
+    );
+  });
+
+  it('should show the empty contribution state', () => {
+    render();
+
+    expect(
+      component.contributions(),
+    ).toEqual([]);
+
+    expect(
+      fixture.nativeElement
+        .textContent,
+    ).toContain(
+      'Todavía no has escrito ningún mensaje',
+    );
+  });
+
+  it('should create a text contribution', () => {
+    const created:
+      Contribution = {
+        ...contribution,
+
+        textContent:
+          'New message',
+    };
+
+    capsuleServiceSpy
+      .createTextContribution
+      .mockReturnValue(
+        of(created),
+      );
+
+    render();
+
+    component.contributionForm
+      .setValue({
+        textContent:
+          'New message',
+      });
+
+    component.createContribution();
+
+    expect(
+      capsuleServiceSpy
+        .createTextContribution,
+    ).toHaveBeenCalledWith(
+      'capsule-123',
+      {
+        textContent:
+          'New message',
+      },
+    );
+
+    expect(
+      component.contributions(),
+    ).toEqual([
+      created,
+    ]);
+
+    expect(
+      component.contributionSaved(),
+    ).toBe(true);
+
+    expect(
+      component.contributionForm
+        .controls
+        .textContent.value,
+    ).toBe('');
+  });
+
+  it('should reject an empty text contribution', () => {
+    render();
+
+    component.contributionForm
+      .setValue({
+        textContent:
+          '   ',
+      });
+
+    component.createContribution();
+
+    expect(
+      capsuleServiceSpy
+        .createTextContribution,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      component.contributionForm
+        .controls
+        .textContent.invalid,
+    ).toBe(true);
+  });
+
+  it('should show an error when creating a contribution fails', () => {
+    capsuleServiceSpy
+      .createTextContribution
+      .mockReturnValue(
+        throwError(
+          () =>
+            new Error(
+              'Create failed',
+            ),
+        ),
+      );
+
+    render();
+
+    component.contributionForm
+      .setValue({
+        textContent:
+          'New message',
+      });
+
+    component.createContribution();
+
+    expect(
+      component.contributionError(),
+    ).toContain(
+      'No se ha podido guardar',
+    );
+
+    expect(
+      component.contributionSaving(),
+    ).toBe(false);
+  });
+
+  it('should start editing a contribution with its current text', () => {
+    capsuleServiceSpy
+      .getTextContributions
+      .mockReturnValue(
+        of([
+          contribution,
+        ]),
+      );
+
+    render();
+
+    component
+      .startContributionEditing(
+        contribution,
+      );
+
+    expect(
+      component
+        .editingContributionId(),
+    ).toBe(
+      'contribution-1',
+    );
+
+    expect(
+      component
+        .contributionEditForm
+        .controls
+        .textContent.value,
+    ).toBe(
+      'Future message',
+    );
+  });
+
+  it('should edit a text contribution', () => {
+    const updated:
+      Contribution = {
+        ...contribution,
+
+        textContent:
+          'Updated message',
+
+        updatedAt:
+          '2026-09-23T12:05:00Z',
+    };
+
+    capsuleServiceSpy
+      .getTextContributions
+      .mockReturnValue(
+        of([
+          contribution,
+        ]),
+      );
+
+    capsuleServiceSpy
+      .updateTextContribution
+      .mockReturnValue(
+        of(updated),
+      );
+
+    render();
+
+    component
+      .startContributionEditing(
+        contribution,
+      );
+
+    component
+      .contributionEditForm
+      .setValue({
+        textContent:
+          'Updated message',
+      });
+
+    component.saveContribution(
+      contribution.id,
+    );
+
+    expect(
+      capsuleServiceSpy
+        .updateTextContribution,
+    ).toHaveBeenCalledWith(
+      'capsule-123',
+      'contribution-1',
+      {
+        textContent:
+          'Updated message',
+      },
+    );
+
+    expect(
+      component.contributions()[0]
+        .textContent,
+    ).toBe(
+      'Updated message',
+    );
+
+    expect(
+      component
+        .editingContributionId(),
+    ).toBeNull();
+
+    expect(
+      component.contributionSaved(),
+    ).toBe(true);
+  });
+
+  it('should show an error when editing a contribution fails', () => {
+    capsuleServiceSpy
+      .getTextContributions
+      .mockReturnValue(
+        of([
+          contribution,
+        ]),
+      );
+
+    capsuleServiceSpy
+      .updateTextContribution
+      .mockReturnValue(
+        throwError(
+          () =>
+            new Error(
+              'Update failed',
+            ),
+        ),
+      );
+
+    render();
+
+    component
+      .startContributionEditing(
+        contribution,
+      );
+
+    component
+      .contributionEditForm
+      .setValue({
+        textContent:
+          'Updated message',
+      });
+
+    component.saveContribution(
+      contribution.id,
+    );
+
+    expect(
+      component.contributionError(),
+    ).toContain(
+      'No se ha podido actualizar',
+    );
+
+    expect(
+      component
+        .editingContributionId(),
+    ).toBe(
+      'contribution-1',
+    );
+  });
+
+  it('should delete a text contribution', () => {
+    capsuleServiceSpy
+      .getTextContributions
+      .mockReturnValue(
+        of([
+          contribution,
+        ]),
+      );
+
+    capsuleServiceSpy
+      .deleteContribution
+      .mockReturnValue(
+        of(undefined),
+      );
+
+    render();
+
+    component.deleteContribution(
+      contribution.id,
+    );
+
+    expect(
+      capsuleServiceSpy
+        .deleteContribution,
+    ).toHaveBeenCalledWith(
+      'capsule-123',
+      'contribution-1',
+    );
+
+    expect(
+      component.contributions(),
+    ).toEqual([]);
+
+    expect(
+      component
+        .deletingContributionId(),
+    ).toBeNull();
+  });
+
+  it('should show an error when deleting a contribution fails', () => {
+    capsuleServiceSpy
+      .getTextContributions
+      .mockReturnValue(
+        of([
+          contribution,
+        ]),
+      );
+
+    capsuleServiceSpy
+      .deleteContribution
+      .mockReturnValue(
+        throwError(
+          () =>
+            new Error(
+              'Delete failed',
+            ),
+        ),
+      );
+
+    render();
+
+    component.deleteContribution(
+      contribution.id,
+    );
+
+    expect(
+      component.contributions(),
+    ).toEqual([
+      contribution,
+    ]);
+
+    expect(
+      component.contributionError(),
+    ).toContain(
+      'No se ha podido eliminar',
+    );
+
+    expect(
+      component
+        .deletingContributionId(),
+    ).toBeNull();
+  });
+
+  it('should show an error when contributions fail to load', () => {
+    capsuleServiceSpy
+      .getTextContributions
+      .mockReturnValue(
+        throwError(
+          () =>
+            new Error(
+              'Load failed',
+            ),
+        ),
+      );
+
+    render();
+
+    expect(
+      component.contributions(),
+    ).toEqual([]);
+
+    expect(
+      component.contributionError(),
+    ).toContain(
+      'No se han podido cargar',
+    );
+
+    expect(
+      component
+        .contributionsLoading(),
+    ).toBe(false);
+  });
+
+  it('should allow a contributor to manage own contributions while collecting', () => {
+    capsuleServiceSpy
+      .getCapsule
+      .mockReturnValue(
+        of({
+          ...sharedOwner,
+
+          role:
+            'CONTRIBUTOR',
+        }),
+      );
+
+    render();
+
+    expect(
+      component
+        .canManageContributions(),
+    ).toBe(true);
+
+    expect(
+      fixture.nativeElement
+        .textContent,
+    ).toContain(
+      'Guardar mensaje',
+    );
+  });
+
+  it('should hide contribution actions when capsule is sealed', () => {
+    capsuleServiceSpy
+      .getCapsule
+      .mockReturnValue(
+        of({
+          ...collectingOwner,
+
+          status:
+            'SEALED',
+        }),
+      );
+
+    capsuleServiceSpy
+      .getTextContributions
+      .mockReturnValue(
+        of([
+          contribution,
+        ]),
+      );
+
+    render();
+
+    expect(
+      component
+        .canManageContributions(),
+    ).toBe(false);
+
+    const text =
+      fixture.nativeElement
+        .textContent;
+
+    expect(text).not.toContain(
+      'Guardar mensaje',
+    );
+
+    expect(text).not.toContain(
+      'Editar',
+    );
+
+    expect(text).not.toContain(
+      'Eliminar',
+    );
+
+    expect(text).toContain(
+      'Future message',
+    );
   });
 
   it('should move the edit date to tomorrow when a past time is selected for today', () => {

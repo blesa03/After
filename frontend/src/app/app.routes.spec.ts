@@ -87,6 +87,9 @@ describe('Application routes', () => {
           role:
             'OWNER' as const,
         }),
+
+    getTextContributions:
+      () => of([]),
   };
 
   beforeEach(async () => {

@@ -28,6 +28,7 @@ import {
   CapsuleRole,
   CapsuleStatus,
   CapsuleType,
+  Contribution,
   UpdateCapsuleRequest,
 } from '../../models/capsule.models';
 import { CapsuleService } from '../../services/capsule.service';
@@ -178,6 +179,9 @@ export class CapsuleDetailPage
   readonly participants =
     signal<CapsuleParticipant[]>([]);
 
+  readonly contributions =
+    signal<Contribution[]>([]);
+
   readonly isLoading =
     signal(true);
 
@@ -216,6 +220,30 @@ export class CapsuleDetailPage
   readonly invitationCopied =
     signal(false);
 
+  readonly contributionsLoading =
+    signal(false);
+
+  readonly contributionSaving =
+    signal(false);
+
+  readonly contributionSaved =
+    signal(false);
+
+  readonly contributionError =
+    signal<string | null>(
+      null,
+    );
+
+  readonly editingContributionId =
+    signal<string | null>(
+      null,
+    );
+
+  readonly deletingContributionId =
+    signal<string | null>(
+      null,
+    );
+
   readonly timezones =
     getSupportedTimezones();
 
@@ -244,6 +272,14 @@ export class CapsuleDetailPage
           'OWNER' &&
         currentCapsule.status ===
           'COLLECTING'
+      );
+    });
+
+  readonly canManageContributions =
+    computed(() => {
+      return (
+        this.capsule()?.status ===
+        'COLLECTING'
       );
     });
 
@@ -282,6 +318,26 @@ export class CapsuleDetailPage
           futureDateValidator,
       },
     );
+
+  readonly contributionForm =
+    this.formBuilder.nonNullable.group({
+      textContent: [
+        '',
+        [
+          Validators.required,
+        ],
+      ],
+    });
+
+  readonly contributionEditForm =
+    this.formBuilder.nonNullable.group({
+      textContent: [
+        '',
+        [
+          Validators.required,
+        ],
+      ],
+    });
 
   get minDate(): string {
     return toDateInputValue(
@@ -608,6 +664,299 @@ export class CapsuleDetailPage
     }
   }
 
+  createContribution(): void {
+    const currentCapsule =
+      this.capsule();
+
+    if (
+      !currentCapsule ||
+      !this.canManageContributions() ||
+      this.contributionSaving()
+    ) {
+      return;
+    }
+
+    if (
+      this.contributionForm.invalid
+    ) {
+      this.contributionForm
+        .markAllAsTouched();
+
+      return;
+    }
+
+    const textContent =
+      this.contributionForm.controls
+        .textContent.value.trim();
+
+    if (!textContent) {
+      this.contributionForm.controls
+        .textContent
+        .setErrors({
+          required: true,
+        });
+
+      return;
+    }
+
+    this.contributionSaving.set(
+      true,
+    );
+
+    this.contributionError.set(
+      null,
+    );
+
+    this.contributionSaved.set(
+      false,
+    );
+
+    this.capsuleService
+      .createTextContribution(
+        currentCapsule.id,
+        {
+          textContent,
+        },
+      )
+      .pipe(
+        finalize(() => {
+          this.contributionSaving.set(
+            false,
+          );
+        }),
+      )
+      .subscribe({
+        next: (contribution) => {
+          this.contributions.update(
+            (current) => [
+              ...current,
+              contribution,
+            ],
+          );
+
+          this.contributionForm.reset({
+            textContent: '',
+          });
+
+          this.contributionSaved.set(
+            true,
+          );
+        },
+
+        error: () => {
+          this.contributionError.set(
+            'No se ha podido guardar el mensaje.',
+          );
+        },
+      });
+  }
+
+  startContributionEditing(
+    contribution: Contribution,
+  ): void {
+    if (
+      !this.canManageContributions() ||
+      this.contributionSaving()
+    ) {
+      return;
+    }
+
+    this.editingContributionId.set(
+      contribution.id,
+    );
+
+    this.contributionEditForm.reset({
+      textContent:
+        contribution.textContent ?? '',
+    });
+
+    this.contributionError.set(
+      null,
+    );
+
+    this.contributionSaved.set(
+      false,
+    );
+  }
+
+  cancelContributionEditing():
+    void {
+    if (
+      this.contributionSaving()
+    ) {
+      return;
+    }
+
+    this.editingContributionId.set(
+      null,
+    );
+
+    this.contributionEditForm.reset({
+      textContent: '',
+    });
+  }
+
+  saveContribution(
+    contributionId: string,
+  ): void {
+    const currentCapsule =
+      this.capsule();
+
+    if (
+      !currentCapsule ||
+      !this.canManageContributions() ||
+      this.contributionSaving()
+    ) {
+      return;
+    }
+
+    if (
+      this.contributionEditForm.invalid
+    ) {
+      this.contributionEditForm
+        .markAllAsTouched();
+
+      return;
+    }
+
+    const textContent =
+      this.contributionEditForm
+        .controls
+        .textContent.value.trim();
+
+    if (!textContent) {
+      this.contributionEditForm
+        .controls
+        .textContent
+        .setErrors({
+          required: true,
+        });
+
+      return;
+    }
+
+    this.contributionSaving.set(
+      true,
+    );
+
+    this.contributionError.set(
+      null,
+    );
+
+    this.contributionSaved.set(
+      false,
+    );
+
+    this.capsuleService
+      .updateTextContribution(
+        currentCapsule.id,
+        contributionId,
+        {
+          textContent,
+        },
+      )
+      .pipe(
+        finalize(() => {
+          this.contributionSaving.set(
+            false,
+          );
+        }),
+      )
+      .subscribe({
+        next: (updated) => {
+          this.contributions.update(
+            (current) =>
+              current.map(
+                (contribution) =>
+                  contribution.id ===
+                  updated.id
+                    ? updated
+                    : contribution,
+              ),
+          );
+
+          this.editingContributionId.set(
+            null,
+          );
+
+          this.contributionSaved.set(
+            true,
+          );
+        },
+
+        error: () => {
+          this.contributionError.set(
+            'No se ha podido actualizar el mensaje.',
+          );
+        },
+      });
+  }
+
+  deleteContribution(
+    contributionId: string,
+  ): void {
+    const currentCapsule =
+      this.capsule();
+
+    if (
+      !currentCapsule ||
+      !this.canManageContributions() ||
+      this.deletingContributionId()
+    ) {
+      return;
+    }
+
+    this.deletingContributionId.set(
+      contributionId,
+    );
+
+    this.contributionError.set(
+      null,
+    );
+
+    this.contributionSaved.set(
+      false,
+    );
+
+    this.capsuleService
+      .deleteContribution(
+        currentCapsule.id,
+        contributionId,
+      )
+      .pipe(
+        finalize(() => {
+          this.deletingContributionId.set(
+            null,
+          );
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.contributions.update(
+            (current) =>
+              current.filter(
+                (contribution) =>
+                  contribution.id !==
+                  contributionId,
+              ),
+          );
+
+          if (
+            this.editingContributionId() ===
+            contributionId
+          ) {
+            this.cancelContributionEditing();
+          }
+        },
+
+        error: () => {
+          this.contributionError.set(
+            'No se ha podido eliminar el mensaje.',
+          );
+        },
+      });
+  }
+
   backToDashboard(): void {
     void this.router.navigate([
       '/dashboard',
@@ -711,6 +1060,10 @@ export class CapsuleDetailPage
             capsule,
           );
 
+          this.loadContributions(
+            capsule.id,
+          );
+
           if (
             capsule.type ===
             'SHARED'
@@ -761,6 +1114,45 @@ export class CapsuleDetailPage
         error: () => {
           this.participants.set(
             [],
+          );
+        },
+      });
+  }
+
+  private loadContributions(
+    capsuleId: string,
+  ): void {
+    this.contributionsLoading.set(
+      true,
+    );
+
+    this.contributionError.set(
+      null,
+    );
+
+    this.capsuleService
+      .getTextContributions(
+        capsuleId,
+      )
+      .pipe(
+        finalize(() => {
+          this.contributionsLoading.set(
+            false,
+          );
+        }),
+      )
+      .subscribe({
+        next: (contributions) => {
+          this.contributions.set(
+            contributions,
+          );
+        },
+
+        error: () => {
+          this.contributions.set([]);
+
+          this.contributionError.set(
+            'No se han podido cargar tus mensajes.',
           );
         },
       });
