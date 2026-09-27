@@ -2,6 +2,7 @@ package com.after.backend.contribution.domain;
 
 import com.after.backend.capsule.domain.Capsule;
 import com.after.backend.user.domain.User;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,6 +13,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -80,6 +82,9 @@ public class Contribution {
     )
     private Instant updatedAt;
 
+    @OneToOne(mappedBy = "contribution", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private MediaObject mediaObject;
+
     protected Contribution() {
     }
 
@@ -107,16 +112,14 @@ public class Contribution {
                         "type cannot be null"
                 );
 
-        if (type != ContributionType.TEXT) {
-            throw new IllegalArgumentException(
-                    "Only TEXT contributions are supported"
-            );
+        if (type == ContributionType.TEXT) {
+            this.textContent =
+                    requireTextContent(
+                            textContent
+                    );
+        } else {
+            this.textContent = null;
         }
-
-        this.textContent =
-                requireTextContent(
-                        textContent
-                );
     }
 
     public static Contribution text(
@@ -209,5 +212,13 @@ public class Contribution {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public MediaObject getMediaObject() {
+        return mediaObject;
+    }
+
+    public void setMediaObject(MediaObject mediaObject) {
+        this.mediaObject = mediaObject;
     }
 }

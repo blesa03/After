@@ -132,10 +132,6 @@ jobs:
         working-directory: .
         run: docker compose up -d --wait postgres minio
 
-      - name: Initialize MinIO
-        working-directory: .
-        run: docker compose run --rm minio-init
-
       - name: Run media worker tests
         run: ./mvnw test
 

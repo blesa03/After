@@ -36,7 +36,7 @@ class ObjectStorageIntegrationTest {
     static final GenericContainer<?> minio =
             new GenericContainer<>(
                     DockerImageName.parse(
-                        "quay.io/minio/minio:RELEASE.2025-04-08T15-41-24Z"
+                        "bitnamilegacy/minio:2025.7.23-debian-12-r5"
                     )
             )
                     .withEnv(
@@ -47,7 +47,10 @@ class ObjectStorageIntegrationTest {
                             "MINIO_ROOT_PASSWORD",
                             SECRET_KEY
                     )
-                    .withCommand("server", "/data")
+                    .withEnv(
+                            "MINIO_DEFAULT_BUCKETS",
+                            BUCKET
+                    )
                     .withExposedPorts(9000)
                     .waitingFor(
                             Wait.forHttp("/minio/health/live")
@@ -83,11 +86,15 @@ class ObjectStorageIntegrationTest {
         s3Client = config.s3Client(properties);
         s3Presigner = config.s3Presigner(properties);
 
-        s3Client.createBucket(
-                CreateBucketRequest.builder()
-                        .bucket(BUCKET)
-                        .build()
-        );
+        try {
+            s3Client.createBucket(
+                    CreateBucketRequest.builder()
+                            .bucket(BUCKET)
+                            .build()
+            );
+        } catch (Exception ignored) {
+            // El bucket pudo ser precreado por MINIO_DEFAULT_BUCKETS
+        }
 
         storage = new S3ObjectStorageService(
                 s3Client,

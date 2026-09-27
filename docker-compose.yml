@@ -17,32 +17,18 @@ services:
       retries: 10
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-04-08T15-41-24Z
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
     container_name: after-minio
-    command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_DEFAULT_BUCKETS: ${MINIO_BUCKET}
+      MINIO_BROWSER: "on"
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - after_minio_data:/data
-
-  minio-init:
-    image: quay.io/minio/mc:RELEASE.2025-04-08T15-39-49Z
-    container_name: after-minio-init
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
-      do
-        sleep 2;
-      done;
-      mc mb --ignore-existing local/${MINIO_BUCKET};
-      exit 0;
-      "
+      - after_minio_data:/bitnami/minio/data
 
   media-worker:
     build:
@@ -63,8 +49,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
-      minio-init:
-        condition: service_completed_successfully
     restart: unless-stopped
 
 volumes:
