@@ -85,12 +85,49 @@ docs/reviews/
   </tbody>
 </table>
 
+### Tipos de revisión
+
+No todas las revisiones parten de la misma situación.
+
+#### Corrective review
+
+Se utiliza cuando la implementación no cumple completamente el alcance o los criterios de aceptación de la tarea.
+
+En este caso, la review documenta:
+
+- requisitos cumplidos, parciales o pendientes;
+- correcciones necesarias;
+- resultado después de aplicar los cambios.
+
+#### Consistency review
+
+Se utiliza cuando la tarea cumple su alcance y criterios de aceptación, pero una revisión posterior detecta oportunidades para mejorar:
+
+- consistencia interna;
+- invariantes de dominio;
+- mantenibilidad;
+- robustez;
+- cobertura de regresión.
+
+Estas mejoras no deben documentarse como requisitos originalmente incumplidos.
+
+La review debe distinguir explícitamente entre:
+
+```text
+Original scope
+Consistency improvements
+Additional coverage
+```
+
+Cuando se añadan tests que no formaban parte de los criterios de aceptación originales, debe indicarse expresamente que se incorporan como cobertura adicional y no como corrección de un requisito omitido.
+
 ### Estados utilizados
 
 - ✅ **Cumplido** — requisito correctamente implementado.
 - 🟡 **Parcial** — existe, pero necesita algún ajuste.
 - 🔴 **Pendiente** — requisito todavía no cubierto.
 - 🔵 **Fuera de alcance** — implementación perteneciente a otra tarea.
+- 🔧 **Consistencia** — el requisito original está cubierto, pero se ha identificado una mejora técnica posterior.
 
 ## Nivel de detalle
 

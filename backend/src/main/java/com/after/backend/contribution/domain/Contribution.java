@@ -218,7 +218,23 @@ public class Contribution {
         return mediaObject;
     }
 
-    public void setMediaObject(MediaObject mediaObject) {
+    void attachMediaObject(
+            MediaObject mediaObject
+    ) {
+        Objects.requireNonNull(
+                mediaObject,
+                "mediaObject cannot be null"
+        );
+
+        if (
+                this.mediaObject != null
+                        && this.mediaObject != mediaObject
+        ) {
+            throw new IllegalStateException(
+                    "Contribution already has a MediaObject"
+            );
+        }
+
         this.mediaObject = mediaObject;
     }
 }
