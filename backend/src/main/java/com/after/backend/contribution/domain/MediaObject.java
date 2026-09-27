@@ -3,8 +3,11 @@ package com.after.backend.contribution.domain;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.Objects;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "media_objects")
@@ -18,6 +21,7 @@ public class MediaObject {
     private Contribution contribution;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false)
     private MediaObjectStatus status = MediaObjectStatus.UPLOADING;
 
@@ -61,9 +65,23 @@ public class MediaObject {
 
     protected MediaObject() {}
 
-    public MediaObject(UUID id, Contribution contribution) {
-        this.id = id;
-        this.contribution = contribution;
+    public MediaObject(
+            UUID id,
+            Contribution contribution
+    ) {
+        this.id =
+                Objects.requireNonNull(
+                        id,
+                        "id cannot be null"
+                );
+
+        this.contribution =
+                Objects.requireNonNull(
+                        contribution,
+                        "contribution cannot be null"
+                );
+
+        contribution.attachMediaObject(this);
     }
 
     // Getters
