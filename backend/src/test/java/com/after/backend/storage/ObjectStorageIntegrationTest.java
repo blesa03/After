@@ -36,7 +36,7 @@ class ObjectStorageIntegrationTest {
     static final GenericContainer<?> minio =
             new GenericContainer<>(
                     DockerImageName.parse(
-                        "minio/minio:RELEASE.2024-01-18T22-51-28Z"
+                        "bitnamilegacy/minio:2025.7.23-debian-12-r5"
                     )
             )
                     .withEnv(
