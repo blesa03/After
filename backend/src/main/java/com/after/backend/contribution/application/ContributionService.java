@@ -20,7 +20,6 @@ import com.after.backend.contribution.infrastructure.ContributionRepository;
 import com.after.backend.storage.ObjectStorageService;
 import com.after.backend.storage.PresignedUpload;
 import com.after.backend.user.domain.User;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,61 +29,116 @@ import java.util.UUID;
 @Service
 public class ContributionService {
 
-    private final ContributionRepository contributionRepository;
-    private final CapsuleMemberRepository capsuleMemberRepository;
-    private final ObjectStorageService objectStorageService;
+    private final ContributionRepository
+            contributionRepository;
 
-    @Value("${after.media.max-image-size:10485760}")
-    private long maxImageSize;
+    private final CapsuleMemberRepository
+            capsuleMemberRepository;
 
-    @Value("${after.media.max-audio-size:52428800}")
-    private long maxAudioSize;
+    private final ObjectStorageService
+            objectStorageService;
 
-    @Value("${after.media.max-video-size:524288000}")
-    private long maxVideoSize;
+    private final MediaUploadPolicy
+            mediaUploadPolicy;
 
     public ContributionService(
             ContributionRepository contributionRepository,
             CapsuleMemberRepository capsuleMemberRepository,
-            ObjectStorageService objectStorageService
+            ObjectStorageService objectStorageService,
+            MediaUploadPolicy mediaUploadPolicy
     ) {
-        this.contributionRepository = contributionRepository;
-        this.capsuleMemberRepository = capsuleMemberRepository;
-        this.objectStorageService = objectStorageService;
+        this.contributionRepository =
+                contributionRepository;
+
+        this.capsuleMemberRepository =
+                capsuleMemberRepository;
+
+        this.objectStorageService =
+                objectStorageService;
+
+        this.mediaUploadPolicy =
+                mediaUploadPolicy;
     }
 
     @Transactional
-    public MediaUploadResponse createMediaContribution(
+    public MediaUploadResponse
+    createMediaContribution(
             User user,
             UUID capsuleId,
             CreateMediaContributionRequest request
     ) {
-        CapsuleMember membership = requireMembership(user, capsuleId);
-        Capsule capsule = membership.getCapsule();
+        CapsuleMember membership =
+                requireMembership(
+                        user,
+                        capsuleId
+                );
 
-        requireCollecting(capsule);
+        Capsule capsule =
+                membership.getCapsule();
 
-        validateMediaProperties(request.type(), request.mimeType(), request.sizeBytes());
+        requireCollecting(
+                capsule
+        );
 
-        PresignedUpload upload = objectStorageService.createPresignedUpload(request.mimeType());
+        String mimeType =
+                mediaUploadPolicy
+                        .validateAndNormalize(
+                                request.type(),
+                                request.mimeType(),
+                                request.sizeBytes()
+                        );
 
-        // 1. Instanciar la entidad Contribution de tipo media
-        Contribution contribution = Contribution.media(capsule, user, request.type());
+        PresignedUpload upload =
+                objectStorageService
+                        .createPresignedUpload(
+                                mimeType
+                        );
 
-        // 2. Instanciar MediaObject pasando su id y la contribución
-        MediaObject mediaObject = new MediaObject(UUID.randomUUID(), contribution);
-        mediaObject.setOriginalObjectKey(upload.objectKey());
-        mediaObject.setOriginalFilename(request.originalFilename());
-        mediaObject.setOriginalMimeType(request.mimeType());
-        mediaObject.setSizeBytes(request.sizeBytes());
-        mediaObject.setStatus(MediaObjectStatus.UPLOADING);
+        Contribution contribution =
+                Contribution.media(
+                        capsule,
+                        user,
+                        request.type()
+                );
 
-        Contribution saved = contributionRepository.saveAndFlush(contribution);
+        MediaObject mediaObject =
+                new MediaObject(
+                        UUID.randomUUID(),
+                        contribution
+                );
+
+        mediaObject.setOriginalObjectKey(
+                upload.objectKey()
+        );
+
+        mediaObject.setOriginalFilename(
+                request.originalFilename()
+        );
+
+        mediaObject.setOriginalMimeType(
+                mimeType
+        );
+
+        mediaObject.setSizeBytes(
+                request.sizeBytes()
+        );
+
+        mediaObject.setStatus(
+                MediaObjectStatus.UPLOADING
+        );
+
+        Contribution saved =
+                contributionRepository
+                        .saveAndFlush(
+                                contribution
+                        );
 
         return new MediaUploadResponse(
                 saved.getId(),
                 upload.url().toString(),
-                "PUT"
+                "PUT",
+                upload.expiresAt(),
+                upload.headers()
         );
     }
 
@@ -94,34 +148,56 @@ public class ContributionService {
             UUID capsuleId,
             CreateTextContributionRequest request
     ) {
-        CapsuleMember membership = requireMembership(user, capsuleId);
-        Capsule capsule = membership.getCapsule();
+        CapsuleMember membership =
+                requireMembership(
+                        user,
+                        capsuleId
+                );
+
+        Capsule capsule =
+                membership.getCapsule();
 
         requireCollecting(capsule);
 
         Contribution contribution;
 
         try {
-            contribution = Contribution.text(
-                    capsule,
-                    user,
-                    request.textContent()
+            contribution =
+                    Contribution.text(
+                            capsule,
+                            user,
+                            request.textContent()
+                    );
+        } catch (
+                IllegalArgumentException |
+                NullPointerException exception
+        ) {
+            throw new InvalidContributionException(
+                    exception.getMessage()
             );
-        } catch (IllegalArgumentException | NullPointerException exception) {
-            throw new InvalidContributionException(exception.getMessage());
         }
 
-        Contribution saved = contributionRepository.saveAndFlush(contribution);
+        Contribution saved =
+                contributionRepository
+                        .saveAndFlush(
+                                contribution
+                        );
 
-        return ContributionResponse.from(saved);
+        return ContributionResponse.from(
+                saved
+        );
     }
 
     @Transactional(readOnly = true)
-    public List<ContributionResponse> listOwnText(
+    public List<ContributionResponse>
+    listOwnText(
             User user,
             UUID capsuleId
     ) {
-        requireMembership(user, capsuleId);
+        requireMembership(
+                user,
+                capsuleId
+        );
 
         return contributionRepository
                 .findAllByCapsuleIdAndAuthorIdAndTypeOrderByCreatedAtAsc(
@@ -130,7 +206,9 @@ public class ContributionService {
                         ContributionType.TEXT
                 )
                 .stream()
-                .map(ContributionResponse::from)
+                .map(
+                        ContributionResponse::from
+                )
                 .toList();
     }
 
@@ -141,25 +219,54 @@ public class ContributionService {
             UUID contributionId,
             UpdateTextContributionRequest request
     ) {
-        CapsuleMember membership = requireMembership(user, capsuleId);
+        CapsuleMember membership =
+                requireMembership(
+                        user,
+                        capsuleId
+                );
 
-        requireCollecting(membership.getCapsule());
+        requireCollecting(
+                membership.getCapsule()
+        );
 
-        Contribution contribution = contributionRepository
-                .findByIdAndCapsuleId(contributionId, capsuleId)
-                .orElseThrow(ContributionNotFoundException::new);
+        Contribution contribution =
+                contributionRepository
+                        .findByIdAndCapsuleId(
+                                contributionId,
+                                capsuleId
+                        )
+                        .orElseThrow(
+                                ContributionNotFoundException::new
+                        );
 
-        requireAuthor(user, contribution);
+        requireAuthor(
+                user,
+                contribution
+        );
 
         try {
-            contribution.updateText(request.textContent());
-        } catch (IllegalArgumentException | IllegalStateException | NullPointerException exception) {
-            throw new InvalidContributionException(exception.getMessage());
+            contribution.updateText(
+                    request.textContent()
+            );
+        } catch (
+                IllegalArgumentException |
+                IllegalStateException |
+                NullPointerException exception
+        ) {
+            throw new InvalidContributionException(
+                    exception.getMessage()
+            );
         }
 
-        Contribution saved = contributionRepository.saveAndFlush(contribution);
+        Contribution saved =
+                contributionRepository
+                        .saveAndFlush(
+                                contribution
+                        );
 
-        return ContributionResponse.from(saved);
+        return ContributionResponse.from(
+                saved
+        );
     }
 
     @Transactional
@@ -168,56 +275,75 @@ public class ContributionService {
             UUID capsuleId,
             UUID contributionId
     ) {
-        CapsuleMember membership = requireMembership(user, capsuleId);
+        CapsuleMember membership =
+                requireMembership(
+                        user,
+                        capsuleId
+                );
 
-        requireCollecting(membership.getCapsule());
+        requireCollecting(
+                membership.getCapsule()
+        );
 
-        Contribution contribution = contributionRepository
-                .findByIdAndCapsuleId(contributionId, capsuleId)
-                .orElseThrow(ContributionNotFoundException::new);
+        Contribution contribution =
+                contributionRepository
+                        .findByIdAndCapsuleId(
+                                contributionId,
+                                capsuleId
+                        )
+                        .orElseThrow(
+                                ContributionNotFoundException::new
+                        );
 
-        requireAuthor(user, contribution);
+        requireAuthor(
+                user,
+                contribution
+        );
 
-        contributionRepository.delete(contribution);
+        contributionRepository.delete(
+                contribution
+        );
     }
 
-    private void validateMediaProperties(ContributionType type, String mimeType, long sizeBytes) {
-        if (type == ContributionType.TEXT) {
-            throw new InvalidContributionException("El tipo de contribución debe ser multimedia");
-        }
-
-        if (mimeType == null || !mimeType.toLowerCase().startsWith(type.name().toLowerCase() + "/")) {
-            throw new InvalidContributionException("El tipo MIME no coincide con el tipo de contribución indicado");
-        }
-
-        long maxSize = switch (type) {
-            case IMAGE -> maxImageSize;
-            case AUDIO -> maxAudioSize;
-            case VIDEO -> maxVideoSize;
-            default -> 0L;
-        };
-
-        if (sizeBytes > maxSize) {
-            throw new InvalidContributionException("El archivo excede el tamaño máximo permitido para este formato");
-        }
-    }
-
-    private CapsuleMember requireMembership(User user, UUID capsuleId) {
+    private CapsuleMember requireMembership(
+            User user,
+            UUID capsuleId
+    ) {
         return capsuleMemberRepository
-                .findWithCapsuleByCapsuleIdAndUserId(capsuleId, user.getId())
-                .orElseThrow(ContributionNotFoundException::new);
+                .findWithCapsuleByCapsuleIdAndUserId(
+                        capsuleId,
+                        user.getId()
+                )
+                .orElseThrow(
+                        ContributionNotFoundException::new
+                );
     }
 
-    private void requireCollecting(Capsule capsule) {
-        if (capsule.getStatus() != CapsuleStatus.COLLECTING) {
+    private void requireCollecting(
+            Capsule capsule
+    ) {
+        if (
+                capsule.getStatus()
+                        != CapsuleStatus.COLLECTING
+        ) {
             throw new InvalidContributionException(
                     "Contributions can only be modified while the capsule is COLLECTING"
             );
         }
     }
 
-    private void requireAuthor(User user, Contribution contribution) {
-        if (!contribution.getAuthor().getId().equals(user.getId())) {
+    private void requireAuthor(
+            User user,
+            Contribution contribution
+    ) {
+        if (
+                !contribution
+                        .getAuthor()
+                        .getId()
+                        .equals(
+                                user.getId()
+                        )
+        ) {
             throw new ContributionAccessDeniedException(
                     "Only the author can modify this contribution"
             );
