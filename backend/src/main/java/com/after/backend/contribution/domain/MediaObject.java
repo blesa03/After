@@ -1,13 +1,22 @@
 package com.after.backend.contribution.domain;
 
-import jakarta.persistence.*;
-import java.time.Instant;
-import java.util.UUID;
-import java.util.Objects;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
+
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(name = "media_objects")
@@ -17,7 +26,7 @@ public class MediaObject {
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "contribution_id", nullable = false)
+    @JoinColumn(name = "contribution_id", nullable = false, unique = true)
     private Contribution contribution;
 
     @Enumerated(EnumType.STRING)
@@ -69,18 +78,8 @@ public class MediaObject {
             UUID id,
             Contribution contribution
     ) {
-        this.id =
-                Objects.requireNonNull(
-                        id,
-                        "id cannot be null"
-                );
-
-        this.contribution =
-                Objects.requireNonNull(
-                        contribution,
-                        "contribution cannot be null"
-                );
-
+        this.id = Objects.requireNonNull(id, "id cannot be null");
+        this.contribution = Objects.requireNonNull(contribution, "contribution cannot be null");
         contribution.attachMediaObject(this);
     }
 
