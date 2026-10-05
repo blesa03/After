@@ -2,7 +2,9 @@ package com.after.backend.contribution.api;
 
 import com.after.backend.auth.application.AuthService;
 import com.after.backend.contribution.api.dto.ContributionResponse;
+import com.after.backend.contribution.api.dto.CreateMediaContributionRequest;
 import com.after.backend.contribution.api.dto.CreateTextContributionRequest;
+import com.after.backend.contribution.api.dto.MediaUploadResponse;
 import com.after.backend.contribution.api.dto.UpdateTextContributionRequest;
 import com.after.backend.contribution.application.ContributionService;
 import com.after.backend.user.domain.User;
@@ -24,92 +26,67 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping(
-        "/api/capsules/{capsuleId}/contributions"
-)
+@RequestMapping("/api/capsules/{capsuleId}/contributions")
 public class ContributionController {
 
-    private final ContributionService
-            contributionService;
-
+    private final ContributionService contributionService;
     private final AuthService authService;
 
     public ContributionController(
             ContributionService contributionService,
             AuthService authService
     ) {
-        this.contributionService =
-                contributionService;
-
-        this.authService =
-                authService;
+        this.contributionService = contributionService;
+        this.authService = authService;
     }
 
     @PostMapping("/text")
-    public ResponseEntity<ContributionResponse>
-    createText(
+    public ResponseEntity<ContributionResponse> createText(
             @PathVariable UUID capsuleId,
-            @Valid
-            @RequestBody
-            CreateTextContributionRequest request,
+            @Valid @RequestBody CreateTextContributionRequest request,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        User currentUser =
-                authService.currentUser(
-                        jwt.getSubject()
-                );
+        User currentUser = authService.currentUser(jwt.getSubject());
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        contributionService
-                                .createText(
-                                        currentUser,
-                                        capsuleId,
-                                        request
-                                )
+                        contributionService.createText(
+                                currentUser,
+                                capsuleId,
+                                request
+                        )
                 );
     }
 
     @GetMapping("/text")
-    public List<ContributionResponse>
-    listOwnText(
+    public List<ContributionResponse> listOwnText(
             @PathVariable UUID capsuleId,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        User currentUser =
-                authService.currentUser(
-                        jwt.getSubject()
-                );
+        User currentUser = authService.currentUser(jwt.getSubject());
 
-        return contributionService
-                .listOwnText(
-                        currentUser,
-                        capsuleId
-                );
+        return contributionService.listOwnText(
+                currentUser,
+                capsuleId
+        );
     }
 
     @PutMapping("/{contributionId}/text")
     public ContributionResponse updateText(
             @PathVariable UUID capsuleId,
             @PathVariable UUID contributionId,
-            @Valid
-            @RequestBody
-            UpdateTextContributionRequest request,
+            @Valid @RequestBody UpdateTextContributionRequest request,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        User currentUser =
-                authService.currentUser(
-                        jwt.getSubject()
-                );
+        User currentUser = authService.currentUser(jwt.getSubject());
 
-        return contributionService
-                .updateText(
-                        currentUser,
-                        capsuleId,
-                        contributionId,
-                        request
-                );
+        return contributionService.updateText(
+                currentUser,
+                capsuleId,
+                contributionId,
+                request
+        );
     }
 
     @DeleteMapping("/{contributionId}")
@@ -118,10 +95,7 @@ public class ContributionController {
             @PathVariable UUID contributionId,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        User currentUser =
-                authService.currentUser(
-                        jwt.getSubject()
-                );
+        User currentUser = authService.currentUser(jwt.getSubject());
 
         contributionService.delete(
                 currentUser,
@@ -132,5 +106,24 @@ public class ContributionController {
         return ResponseEntity
                 .noContent()
                 .build();
+    }
+
+    @PostMapping("/media")
+    public ResponseEntity<MediaUploadResponse> createMediaContribution(
+            @PathVariable UUID capsuleId,
+            @Valid @RequestBody CreateMediaContributionRequest request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        User currentUser = authService.currentUser(jwt.getSubject());
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        contributionService.createMediaContribution(
+                                currentUser,
+                                capsuleId,
+                                request
+                        )
+                );
     }
 }
