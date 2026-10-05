@@ -56,6 +56,9 @@ class ObjectStorageIntegrationTest {
                             Wait.forHttp("/minio/health/live")
                                     .forPort(9000)
                                     .forStatusCode(200)
+                                    .withStartupTimeout(
+                                            Duration.ofMinutes(2)
+                                    )
                     );
 
     private static S3Client s3Client;

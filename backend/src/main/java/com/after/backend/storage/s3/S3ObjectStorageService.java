@@ -8,9 +8,9 @@ import com.after.backend.storage.config.StorageProperties;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -18,13 +18,16 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
 @Service
-public class S3ObjectStorageService implements ObjectStorageService {
+public class S3ObjectStorageService
+        implements ObjectStorageService {
 
-    private static final String OBJECT_PREFIX = "objects/";
+    private static final String OBJECT_PREFIX =
+            "objects/";
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
@@ -45,41 +48,69 @@ public class S3ObjectStorageService implements ObjectStorageService {
             String contentType
     ) {
         String normalizedContentType =
-                requireNonBlank(contentType, "contentType");
+                requireNonBlank(
+                        contentType,
+                        "contentType"
+                );
 
         String objectKey =
-                OBJECT_PREFIX + UUID.randomUUID();
+                OBJECT_PREFIX
+                        + UUID.randomUUID();
 
         Instant expiresAt =
-                Instant.now().plus(properties.presignTtl());
+                Instant.now()
+                        .plus(
+                                properties.presignTtl()
+                        );
 
         PutObjectRequest objectRequest =
-                PutObjectRequest.builder()
-                        .bucket(properties.bucket())
-                        .key(objectKey)
-                        .contentType(normalizedContentType)
+                PutObjectRequest
+                        .builder()
+                        .bucket(
+                                properties.bucket()
+                        )
+                        .key(
+                                objectKey
+                        )
+                        .contentType(
+                                normalizedContentType
+                        )
                         .build();
 
         PutObjectPresignRequest presignRequest =
-                PutObjectPresignRequest.builder()
-                        .signatureDuration(properties.presignTtl())
-                        .putObjectRequest(objectRequest)
+                PutObjectPresignRequest
+                        .builder()
+                        .signatureDuration(
+                                properties.presignTtl()
+                        )
+                        .putObjectRequest(
+                                objectRequest
+                        )
                         .build();
 
         try {
-            URI url = URI.create(
-                    s3Presigner
-                            .presignPutObject(presignRequest)
-                            .url()
-                            .toString()
-            );
+            URI url =
+                    URI.create(
+                            s3Presigner
+                                    .presignPutObject(
+                                            presignRequest
+                                    )
+                                    .url()
+                                    .toString()
+                    );
 
             return new PresignedUpload(
                     objectKey,
                     url,
-                    expiresAt
+                    expiresAt,
+                    Map.of(
+                            "Content-Type",
+                            normalizedContentType
+                    )
             );
-        } catch (RuntimeException exception) {
+        } catch (
+                RuntimeException exception
+        ) {
             throw new ObjectStorageException(
                     "Unable to generate presigned upload URL",
                     exception
@@ -88,36 +119,61 @@ public class S3ObjectStorageService implements ObjectStorageService {
     }
 
     @Override
-    public PresignedDownload createPresignedDownload(
+    public PresignedDownload
+    createPresignedDownload(
             String objectKey
     ) {
-        String key = requireObjectKey(objectKey);
+        String key =
+                requireObjectKey(
+                        objectKey
+                );
 
         Instant expiresAt =
-                Instant.now().plus(properties.presignTtl());
+                Instant.now()
+                        .plus(
+                                properties.presignTtl()
+                        );
 
         GetObjectRequest objectRequest =
-                GetObjectRequest.builder()
-                        .bucket(properties.bucket())
-                        .key(key)
+                GetObjectRequest
+                        .builder()
+                        .bucket(
+                                properties.bucket()
+                        )
+                        .key(
+                                key
+                        )
                         .build();
 
         GetObjectPresignRequest presignRequest =
-                GetObjectPresignRequest.builder()
-                        .signatureDuration(properties.presignTtl())
-                        .getObjectRequest(objectRequest)
+                GetObjectPresignRequest
+                        .builder()
+                        .signatureDuration(
+                                properties.presignTtl()
+                        )
+                        .getObjectRequest(
+                                objectRequest
+                        )
                         .build();
 
         try {
-            URI url = URI.create(
-                    s3Presigner
-                            .presignGetObject(presignRequest)
-                            .url()
-                            .toString()
-            );
+            URI url =
+                    URI.create(
+                            s3Presigner
+                                    .presignGetObject(
+                                            presignRequest
+                                    )
+                                    .url()
+                                    .toString()
+                    );
 
-            return new PresignedDownload(url, expiresAt);
-        } catch (RuntimeException exception) {
+            return new PresignedDownload(
+                    url,
+                    expiresAt
+            );
+        } catch (
+                RuntimeException exception
+        ) {
             throw new ObjectStorageException(
                     "Unable to generate presigned download URL",
                     exception
@@ -126,20 +182,35 @@ public class S3ObjectStorageService implements ObjectStorageService {
     }
 
     @Override
-    public boolean exists(String objectKey) {
-        String key = requireObjectKey(objectKey);
+    public boolean exists(
+            String objectKey
+    ) {
+        String key =
+                requireObjectKey(
+                        objectKey
+                );
 
         try {
             s3Client.headObject(
-                    HeadObjectRequest.builder()
-                            .bucket(properties.bucket())
-                            .key(key)
+                    HeadObjectRequest
+                            .builder()
+                            .bucket(
+                                    properties.bucket()
+                            )
+                            .key(
+                                    key
+                            )
                             .build()
             );
 
             return true;
-        } catch (S3Exception exception) {
-            if (exception.statusCode() == 404) {
+        } catch (
+                S3Exception exception
+        ) {
+            if (
+                    exception.statusCode()
+                            == 404
+            ) {
                 return false;
             }
 
@@ -151,17 +222,29 @@ public class S3ObjectStorageService implements ObjectStorageService {
     }
 
     @Override
-    public void delete(String objectKey) {
-        String key = requireObjectKey(objectKey);
+    public void delete(
+            String objectKey
+    ) {
+        String key =
+                requireObjectKey(
+                        objectKey
+                );
 
         try {
             s3Client.deleteObject(
-                    DeleteObjectRequest.builder()
-                            .bucket(properties.bucket())
-                            .key(key)
+                    DeleteObjectRequest
+                            .builder()
+                            .bucket(
+                                    properties.bucket()
+                            )
+                            .key(
+                                    key
+                            )
                             .build()
             );
-        } catch (S3Exception exception) {
+        } catch (
+                S3Exception exception
+        ) {
             throw new ObjectStorageException(
                     "Unable to delete object",
                     exception
@@ -169,8 +252,13 @@ public class S3ObjectStorageService implements ObjectStorageService {
         }
     }
 
-    private String requireObjectKey(String objectKey) {
-        return requireNonBlank(objectKey, "objectKey");
+    private String requireObjectKey(
+            String objectKey
+    ) {
+        return requireNonBlank(
+                objectKey,
+                "objectKey"
+        );
     }
 
     private String requireNonBlank(
@@ -179,14 +267,17 @@ public class S3ObjectStorageService implements ObjectStorageService {
     ) {
         Objects.requireNonNull(
                 value,
-                fieldName + " cannot be null"
+                fieldName
+                        + " cannot be null"
         );
 
-        String normalized = value.trim();
+        String normalized =
+                value.trim();
 
         if (normalized.isBlank()) {
             throw new IllegalArgumentException(
-                    fieldName + " cannot be blank"
+                    fieldName
+                            + " cannot be blank"
             );
         }
 

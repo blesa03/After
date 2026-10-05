@@ -26,30 +26,49 @@ public class MediaObject {
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "contribution_id", nullable = false, unique = true)
+    @JoinColumn(
+            name = "contribution_id",
+            nullable = false
+    )
     private Contribution contribution;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false)
-    private MediaObjectStatus status = MediaObjectStatus.UPLOADING;
+    private MediaObjectStatus status =
+            MediaObjectStatus.UPLOADING;
 
-    @Column(name = "original_object_key", length = 1024)
+    @Column(
+            name = "original_object_key",
+            length = 1024
+    )
     private String originalObjectKey;
 
-    @Column(name = "processed_object_key", length = 1024)
+    @Column(
+            name = "processed_object_key",
+            length = 1024
+    )
     private String processedObjectKey;
 
-    @Column(name = "thumbnail_object_key", length = 1024)
+    @Column(
+            name = "thumbnail_object_key",
+            length = 1024
+    )
     private String thumbnailObjectKey;
 
     @Column(name = "original_filename")
     private String originalFilename;
 
-    @Column(name = "original_mime_type", length = 100)
+    @Column(
+            name = "original_mime_type",
+            length = 100
+    )
     private String originalMimeType;
 
-    @Column(name = "processed_mime_type", length = 100)
+    @Column(
+            name = "processed_mime_type",
+            length = 100
+    )
     private String processedMimeType;
 
     @Column(name = "size_bytes")
@@ -65,51 +84,165 @@ public class MediaObject {
     private Integer height;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(
+            name = "created_at",
+            nullable = false,
+            updatable = false
+    )
     private Instant createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
+    @Column(
+            name = "updated_at",
+            nullable = false
+    )
     private Instant updatedAt;
 
-    protected MediaObject() {}
+    protected MediaObject() {
+    }
 
     public MediaObject(
             UUID id,
             Contribution contribution
     ) {
-        this.id = Objects.requireNonNull(id, "id cannot be null");
-        this.contribution = Objects.requireNonNull(contribution, "contribution cannot be null");
+        this.id =
+                Objects.requireNonNull(
+                        id,
+                        "id cannot be null"
+                );
+
+        this.contribution =
+                Objects.requireNonNull(
+                        contribution,
+                        "contribution cannot be null"
+                );
+
         contribution.attachMediaObject(this);
     }
 
-    // Getters
-    public UUID getId() { return id; }
-    public Contribution getContribution() { return contribution; }
-    public MediaObjectStatus getStatus() { return status; }
-    public String getOriginalObjectKey() { return originalObjectKey; }
-    public String getProcessedObjectKey() { return processedObjectKey; }
-    public String getThumbnailObjectKey() { return thumbnailObjectKey; }
-    public String getOriginalFilename() { return originalFilename; }
-    public String getOriginalMimeType() { return originalMimeType; }
-    public String getProcessedMimeType() { return processedMimeType; }
-    public Long getSizeBytes() { return sizeBytes; }
-    public Long getDurationMs() { return durationMs; }
-    public Integer getWidth() { return width; }
-    public Integer getHeight() { return height; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
+    public UUID getId() {
+        return id;
+    }
 
-    // Setters
-    public void setStatus(MediaObjectStatus status) { this.status = status; }
-    public void setOriginalObjectKey(String key) { this.originalObjectKey = key; }
-    public void setProcessedObjectKey(String key) { this.processedObjectKey = key; }
-    public void setThumbnailObjectKey(String key) { this.thumbnailObjectKey = key; }
-    public void setOriginalFilename(String name) { this.originalFilename = name; }
-    public void setOriginalMimeType(String mime) { this.originalMimeType = mime; }
-    public void setProcessedMimeType(String mime) { this.processedMimeType = mime; }
-    public void setSizeBytes(Long size) { this.sizeBytes = size; }
-    public void setDurationMs(Long duration) { this.durationMs = duration; }
-    public void setWidth(Integer width) { this.width = width; }
-    public void setHeight(Integer height) { this.height = height; }
+    public Contribution getContribution() {
+        return contribution;
+    }
+
+    public MediaObjectStatus getStatus() {
+        return status;
+    }
+
+    public String getOriginalObjectKey() {
+        return originalObjectKey;
+    }
+
+    public String getProcessedObjectKey() {
+        return processedObjectKey;
+    }
+
+    public String getThumbnailObjectKey() {
+        return thumbnailObjectKey;
+    }
+
+    public String getOriginalFilename() {
+        return originalFilename;
+    }
+
+    public String getOriginalMimeType() {
+        return originalMimeType;
+    }
+
+    public String getProcessedMimeType() {
+        return processedMimeType;
+    }
+
+    public Long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public Long getDurationMs() {
+        return durationMs;
+    }
+
+    public Integer getWidth() {
+        return width;
+    }
+
+    public Integer getHeight() {
+        return height;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setStatus(
+            MediaObjectStatus status
+    ) {
+        this.status = status;
+    }
+
+    public void setOriginalObjectKey(
+            String key
+    ) {
+        this.originalObjectKey = key;
+    }
+
+    public void setProcessedObjectKey(
+            String key
+    ) {
+        this.processedObjectKey = key;
+    }
+
+    public void setThumbnailObjectKey(
+            String key
+    ) {
+        this.thumbnailObjectKey = key;
+    }
+
+    public void setOriginalFilename(
+            String name
+    ) {
+        this.originalFilename = name;
+    }
+
+    public void setOriginalMimeType(
+            String mime
+    ) {
+        this.originalMimeType = mime;
+    }
+
+    public void setProcessedMimeType(
+            String mime
+    ) {
+        this.processedMimeType = mime;
+    }
+
+    public void setSizeBytes(
+            Long size
+    ) {
+        this.sizeBytes = size;
+    }
+
+    public void setDurationMs(
+            Long duration
+    ) {
+        this.durationMs = duration;
+    }
+
+    public void setWidth(
+            Integer width
+    ) {
+        this.width = width;
+    }
+
+    public void setHeight(
+            Integer height
+    ) {
+        this.height = height;
+    }
 }
