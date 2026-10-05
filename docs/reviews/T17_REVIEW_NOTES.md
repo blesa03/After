@@ -644,68 +644,54 @@ Después de esta revisión:
 
 ## 7. Aprendizajes reutilizables
 
-### Diferenciar requisitos definidos de decisiones abiertas
+### Preservar decisiones técnicas ya consolidadas
 
-Una issue puede dejar margen deliberadamente al desarrollador.
+Cuando una tarea modifica una zona existente, las decisiones adoptadas previamente siguen formando parte del comportamiento esperado mientras la nueva tarea no requiera cambiarlas.
 
-Antes de implementar conviene distinguir:
+En este caso, T17 construía directamente sobre el modelo definido y revisado en T16.
+
+Por tanto, antes de modificar esa zona era relevante comprobar:
 
 ```text
-defined requirement
-existing project decision
-open technical decision
-out-of-scope behaviour
+current implementation
+existing domain invariants
+previous review decisions
+new task requirements
 ```
 
-Una decisión abierta no es necesariamente un defecto de la tarea.
-
-Sí requiere que el desarrollador identifique que existe una decisión que debe tomar conscientemente antes de dejar que forme parte del código.
+Esto permite incorporar nueva funcionalidad sin reabrir accidentalmente decisiones ya resueltas.
 
 ---
 
-### Revisar el contexto anterior antes de modificar una zona existente
+### Mantener el diff centrado en la tarea
 
-Cuando una tarea depende de una funcionalidad ya revisada, el estado actual del código y sus review notes forman parte del contexto técnico relevante.
+Una modificación puede funcionar correctamente y, aun así, incluir cambios que no son necesarios para cumplir su objetivo.
 
-En este caso T17 construía directamente sobre T16.
+Un diff más acotado facilita distinguir:
 
-Consultar:
+- funcionalidad nueva;
+- cambios de comportamiento;
+- refactors necesarios;
+- modificaciones accidentales;
+- regresiones.
 
-```text
-T16_REVIEW_NOTES.md
-```
-
-permite conocer qué decisiones del modelo fueron deliberadas y deben preservarse mientras la nueva tarea no requiera modificarlas.
-
----
-
-### Revisar el diff además del resultado funcional
-
-Que una tarea compile y funcione no significa que todos los cambios introducidos sean necesarios.
-
-Un diff inesperadamente grande puede indicar:
-
-- reformateo no relacionado;
-- código generado desde una versión anterior;
-- archivos sustituidos completamente;
-- cambios de arquitectura accidentales;
-- regresiones difíciles de detectar leyendo únicamente el resultado final.
-
-La revisión del diff forma parte de validar el trabajo generado por una herramienta de IA.
+Cuando aparecen cambios sobre archivos o decisiones que la tarea no necesita modificar, conviene comprobar si realmente forman parte del alcance antes de integrarlos.
 
 ---
 
-### Convertir criterios de aceptación en preguntas verificables
+### Convertir los criterios de aceptación en verificaciones concretas
 
-Antes de considerar un comportamiento terminado conviene preguntarse:
+Los criterios de aceptación describen comportamiento esperado.
+
+Para cada uno conviene poder identificar cómo se demuestra:
 
 ```text
-Requirement
-    ↓
-How do I know this actually works?
+acceptance criterion
+        ↓
+verification
 ```
 
-La respuesta puede ser:
+Dependiendo del caso, la comprobación puede realizarse mediante:
 
 ```text
 code inspection
@@ -714,44 +700,6 @@ automated test
 integration test
 ```
 
-No todas las tareas necesitan el mismo tipo o cantidad de tests.
+En T17 intervienen permisos, estados, límites, persistencia y object storage.
 
-En cambio, cuando intervienen:
-
-```text
-permissions
-state transitions
-boundary values
-persistence
-external infrastructure
-```
-
-la cobertura automatizada puede ser la forma más fiable de demostrar que el comportamiento esperado existe realmente.
-
----
-
-### La IA propone; el desarrollador conserva el contexto y toma las decisiones
-
-Una herramienta con acceso al repositorio puede leer el código existente, pero no necesariamente distingue por sí sola:
-
-- qué decisiones son deliberadas;
-- qué decisiones son históricas;
-- qué partes pueden modificarse;
-- qué partes pertenecen a otra tarea;
-- qué supuestos está introduciendo al rellenar huecos.
-
-El desarrollador sigue siendo responsable de revisar esas propuestas y decidir conscientemente qué cambios deben formar parte de la implementación.
-
-El objetivo no es únicamente obtener código que compile.
-
-El objetivo es conseguir que el código generado siga respetando:
-
-```text
-issue
-architecture
-existing invariants
-scope
-acceptance criteria
-```
-
-de forma coherente.
+Por ello, la cobertura de integración añadida durante la review permite verificar de forma reproducible comportamientos que serían más difíciles de demostrar únicamente mediante inspección.
