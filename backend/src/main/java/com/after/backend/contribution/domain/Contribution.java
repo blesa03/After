@@ -46,7 +46,12 @@ public class Contribution {
     @Column(name = "text_content", columnDefinition = "TEXT")
     private String textContent;
 
-    @OneToOne(mappedBy = "contribution", cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = true)
+    @OneToOne(
+            mappedBy = "contribution",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
     private MediaObject mediaObject;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -55,54 +60,98 @@ public class Contribution {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected Contribution() {}
+    protected Contribution() {
+    }
 
-    private Contribution(Capsule capsule, User author, ContributionType type, String textContent) {
-        this.capsule = Objects.requireNonNull(capsule, "capsule cannot be null");
-        this.author = Objects.requireNonNull(author, "author cannot be null");
-        this.type = Objects.requireNonNull(type, "type cannot be null");
+    private Contribution(
+            Capsule capsule,
+            User author,
+            ContributionType type,
+            String textContent
+    ) {
+        this.capsule =
+                Objects.requireNonNull(
+                        capsule,
+                        "capsule cannot be null"
+                );
+
+        this.author =
+                Objects.requireNonNull(
+                        author,
+                        "author cannot be null"
+                );
+
+        this.type =
+                Objects.requireNonNull(
+                        type,
+                        "type cannot be null"
+                );
 
         if (type == ContributionType.TEXT) {
-            this.textContent = requireTextContent(textContent);
+            this.textContent =
+                    requireTextContent(
+                            textContent
+                    );
         } else {
-            if (textContent != null) {
-                throw new IllegalArgumentException("Media contributions cannot have text content directly");
-            }
+            this.textContent = null;
         }
     }
 
-    public static Contribution text(Capsule capsule, User author, String textContent) {
-        return new Contribution(capsule, author, ContributionType.TEXT, textContent);
+    public static Contribution text(
+            Capsule capsule,
+            User author,
+            String textContent
+    ) {
+        return new Contribution(
+                capsule,
+                author,
+                ContributionType.TEXT,
+                textContent
+        );
     }
 
-    public static Contribution media(Capsule capsule, User author, ContributionType type) {
+    public static Contribution media(
+            Capsule capsule,
+            User author,
+            ContributionType type
+    ) {
         if (type == ContributionType.TEXT) {
-            throw new IllegalArgumentException("Use text() factory for TEXT contributions");
+            throw new IllegalArgumentException(
+                    "Use text() factory for TEXT contributions"
+            );
         }
-        return new Contribution(capsule, author, type, null);
+
+        return new Contribution(
+                capsule,
+                author,
+                type,
+                null
+        );
     }
 
-    public void attachMediaObject(MediaObject mediaObject) {
-        Objects.requireNonNull(mediaObject, "mediaObject cannot be null");
-        if (this.mediaObject != null && this.mediaObject != mediaObject) {
-            throw new IllegalStateException("Contribution already has a MediaObject");
-        }
-        this.mediaObject = mediaObject;
-    }
-
-    public void updateText(String textContent) {
+    public void updateText(
+            String textContent
+    ) {
         if (type != ContributionType.TEXT) {
-            throw new IllegalStateException("Contribution is not TEXT");
+            throw new IllegalStateException(
+                    "Contribution is not TEXT"
+            );
         }
-        this.textContent = requireTextContent(textContent);
+
+        this.textContent =
+                requireTextContent(
+                        textContent
+                );
     }
 
     @PrePersist
     void prePersist() {
         Instant now = Instant.now();
+
         if (createdAt == null) {
             createdAt = now;
         }
+
         updatedAt = now;
     }
 
@@ -111,21 +160,75 @@ public class Contribution {
         updatedAt = Instant.now();
     }
 
-    private static String requireTextContent(String value) {
-        Objects.requireNonNull(value, "textContent cannot be null");
-        String normalized = value.trim();
+    private static String requireTextContent(
+            String value
+    ) {
+        Objects.requireNonNull(
+                value,
+                "textContent cannot be null"
+        );
+
+        String normalized =
+                value.trim();
+
         if (normalized.isBlank()) {
-            throw new IllegalArgumentException("textContent cannot be blank");
+            throw new IllegalArgumentException(
+                    "textContent cannot be blank"
+            );
         }
+
         return normalized;
     }
 
-    public UUID getId() { return id; }
-    public Capsule getCapsule() { return capsule; }
-    public User getAuthor() { return author; }
-    public ContributionType getType() { return type; }
-    public String getTextContent() { return textContent; }
-    public MediaObject getMediaObject() { return mediaObject; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
+    public UUID getId() {
+        return id;
+    }
+
+    public Capsule getCapsule() {
+        return capsule;
+    }
+
+    public User getAuthor() {
+        return author;
+    }
+
+    public ContributionType getType() {
+        return type;
+    }
+
+    public String getTextContent() {
+        return textContent;
+    }
+
+    public MediaObject getMediaObject() {
+        return mediaObject;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    void attachMediaObject(
+            MediaObject mediaObject
+    ) {
+        Objects.requireNonNull(
+                mediaObject,
+                "mediaObject cannot be null"
+        );
+
+        if (
+                this.mediaObject != null
+                        && this.mediaObject != mediaObject
+        ) {
+            throw new IllegalStateException(
+                    "Contribution already has a MediaObject"
+            );
+        }
+
+        this.mediaObject = mediaObject;
+    }
 }
