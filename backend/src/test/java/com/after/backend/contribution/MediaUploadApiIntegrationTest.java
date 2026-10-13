@@ -33,6 +33,8 @@ import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.net.URI;
@@ -787,6 +789,478 @@ class MediaUploadApiIntegrationTest {
                 objectKey
         );
     }
+
+    @Test
+    void shouldCompleteMediaUploadAfterDirectPut()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        Capsule capsule = createSharedCapsule(owner);
+
+        MvcResult initiated = initiateUpload(
+                owner,
+                capsule.getId(),
+                "IMAGE",
+                "photo.jpg",
+                "image/jpeg",
+                4L
+        )
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID contributionId = UUID.fromString(
+                jsonField(initiated, "contributionId")
+        );
+
+        // Upload directly to MinIO using the T17 contract.
+        HttpRequest request = HttpRequest.newBuilder(
+                        URI.create(jsonField(initiated, "uploadUrl"))
+                )
+                .header(
+                        "Content-Type",
+                        jsonHeader(initiated, "Content-Type")
+                )
+                .PUT(
+                        HttpRequest.BodyPublishers.ofByteArray(
+                                new byte[]{1, 2, 3, 4}
+                        )
+                )
+                .build();
+
+        HttpResponse<String> uploadResponse = HttpClient
+                .newHttpClient()
+                .send(
+                        request,
+                        HttpResponse.BodyHandlers.ofString()
+                );
+
+        assertThat(uploadResponse.statusCode())
+                .isBetween(200, 299);
+
+        // Notify the backend after completing the PUT.
+        completeUpload(
+                owner,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isAccepted())
+                .andExpect(
+                        jsonPath("$.contributionId")
+                                .value(contributionId.toString())
+                )
+                .andExpect(
+                        jsonPath("$.status")
+                                .value("PROCESSING")
+                );
+
+        assertThat(mediaStatus(contributionId))
+                .isEqualTo("PROCESSING");
+    }
+
+    @Test
+    void shouldRejectCompletionWithoutUploadedObject()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        Capsule capsule = createSharedCapsule(owner);
+
+        UUID contributionId = initiateImage(
+                owner,
+                capsule.getId()
+        );
+
+        completeUpload(
+                owner,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isConflict());
+
+        assertThat(mediaStatus(contributionId))
+                .isEqualTo("UPLOADING");
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    void shouldRejectUploadedObjectWithIncorrectSize()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        Capsule capsule = createSharedCapsule(owner);
+
+        UUID contributionId = initiateImage(
+                owner,
+                capsule.getId()
+        );
+
+        // The initiated upload declares 4 bytes.
+        uploadStoredObject(
+                contributionId,
+                "image/jpeg",
+                new byte[]{1, 2, 3}
+        );
+
+        completeUpload(
+                owner,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isUnprocessableEntity());
+
+        assertThat(mediaStatus(contributionId))
+                .isEqualTo("UPLOADING");
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    void shouldRejectUploadedObjectWithIncorrectMimeType()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        Capsule capsule = createSharedCapsule(owner);
+
+        UUID contributionId = initiateImage(
+                owner,
+                capsule.getId()
+        );
+
+        // The initiated upload declares image/jpeg.
+        uploadStoredObject(
+                contributionId,
+                "image/png",
+                new byte[]{1, 2, 3, 4}
+        );
+
+        completeUpload(
+                owner,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isUnprocessableEntity());
+
+        assertThat(mediaStatus(contributionId))
+                .isEqualTo("UPLOADING");
+    }
+
+    @Test
+    void shouldRejectCompletionByAnotherMember()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        User contributor = createUser("contributor@example.com");
+
+        Capsule capsule = Capsule.create(
+                "Shared capsule",
+                null,
+                CapsuleType.SHARED,
+                Instant.now().plusSeconds(3600),
+                "Europe/Madrid",
+                owner
+        );
+
+        capsule.addContributor(contributor);
+
+        capsule = capsuleRepository.saveAndFlush(capsule);
+
+        UUID contributionId = initiateImage(
+                owner,
+                capsule.getId()
+        );
+
+        completeUpload(
+                contributor,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isForbidden());
+
+        assertThat(mediaStatus(contributionId))
+                .isEqualTo("UPLOADING");
+    }
+
+    @Test
+    void shouldRejectCompletionByNonMember()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        User outsider = createUser("outsider@example.com");
+
+        Capsule capsule = createSharedCapsule(owner);
+
+        UUID contributionId = initiateImage(
+                owner,
+                capsule.getId()
+        );
+
+        completeUpload(
+                outsider,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isNotFound());
+
+        assertThat(mediaStatus(contributionId))
+                .isEqualTo("UPLOADING");
+    }
+
+    @Test
+    void shouldRejectCompletionWhenCapsuleIsSealed()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        Capsule capsule = createSharedCapsule(owner);
+
+        UUID contributionId = initiateImage(
+                owner,
+                capsule.getId()
+        );
+
+        jdbcTemplate.update(
+                """
+                UPDATE capsules
+                SET status = 'SEALED'
+                WHERE id = ?
+                """,
+                capsule.getId()
+        );
+
+        entityManager.clear();
+
+        completeUpload(
+                owner,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isBadRequest());
+
+        assertThat(mediaStatus(contributionId))
+                .isEqualTo("UPLOADING");
+    }
+
+    @Test
+    void shouldRejectUnknownContribution()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        Capsule capsule = createSharedCapsule(owner);
+
+        completeUpload(
+                owner,
+                capsule.getId(),
+                UUID.randomUUID()
+        )
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldRejectContributionFromDifferentCapsule()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+
+        Capsule first = createSharedCapsule(owner);
+        Capsule second = createSharedCapsule(owner);
+
+        UUID contributionId = initiateImage(
+                owner,
+                first.getId()
+        );
+
+        completeUpload(
+                owner,
+                second.getId(),
+                contributionId
+        )
+                .andExpect(status().isNotFound());
+
+        assertThat(mediaStatus(contributionId))
+                .isEqualTo("UPLOADING");
+    }
+
+    @Test
+    void shouldRejectRepeatedCompletion()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        Capsule capsule = createSharedCapsule(owner);
+
+        UUID contributionId = initiateImage(
+                owner,
+                capsule.getId()
+        );
+
+        uploadStoredObject(
+                contributionId,
+                "image/jpeg",
+                new byte[]{1, 2, 3, 4}
+        );
+
+        completeUpload(
+                owner,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isAccepted());
+
+        completeUpload(
+                owner,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isConflict());
+
+        assertThat(mediaStatus(contributionId))
+                .isEqualTo("PROCESSING");
+    }
+
+    @Test
+    void shouldRejectCompletionOfTextContribution()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        Capsule capsule = createSharedCapsule(owner);
+
+        MvcResult created = mockMvc.perform(
+                post(
+                        "/api/capsules/{capsuleId}/contributions/text",
+                        capsule.getId()
+                )
+                        .with(as(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"textContent\":\"hello\"}")
+        )
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        UUID contributionId = UUID.fromString(
+                jsonField(created, "id")
+        );
+
+        completeUpload(
+                owner,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldAllowContributorToCompleteOwnUpload()
+            throws Exception {
+
+        User owner = createUser("owner@example.com");
+        User contributor = createUser("contributor@example.com");
+
+        Capsule capsule = Capsule.create(
+                "Shared capsule",
+                null,
+                CapsuleType.SHARED,
+                Instant.now().plusSeconds(3600),
+                "Europe/Madrid",
+                owner
+        );
+
+        capsule.addContributor(contributor);
+        capsule = capsuleRepository.saveAndFlush(capsule);
+
+        UUID contributionId = initiateImage(
+                contributor,
+                capsule.getId()
+        );
+
+        uploadStoredObject(
+                contributionId,
+                "image/jpeg",
+                new byte[]{1, 2, 3, 4}
+        );
+
+        completeUpload(
+                contributor,
+                capsule.getId(),
+                contributionId
+        )
+                .andExpect(status().isAccepted());
+
+        assertThat(mediaStatus(contributionId))
+                .isEqualTo("PROCESSING");
+    }
+
+// Test helpers
+
+private ResultActions completeUpload(
+        User user,
+        UUID capsuleId,
+        UUID contributionId
+) throws Exception {
+
+    return mockMvc.perform(
+            post(
+                    "/api/capsules/{capsuleId}/contributions/{contributionId}/complete",
+                    capsuleId,
+                    contributionId
+            ).with(as(user))
+    );
+}
+
+private UUID initiateImage(
+        User user,
+        UUID capsuleId
+) throws Exception {
+
+    MvcResult result = initiateUpload(
+            user,
+            capsuleId,
+            "IMAGE",
+            "photo.jpg",
+            "image/jpeg",
+            4L
+    )
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    return UUID.fromString(
+            jsonField(result, "contributionId")
+    );
+}
+
+private String mediaStatus(UUID contributionId) {
+
+    return jdbcTemplate.queryForObject(
+            """
+            SELECT status::text
+            FROM media_objects
+            WHERE contribution_id = ?
+            """,
+            String.class,
+            contributionId
+    );
+}
+
+private void uploadStoredObject(
+        UUID contributionId,
+        String contentType,
+        byte[] content
+) {
+
+    String objectKey = jdbcTemplate.queryForObject(
+            """
+            SELECT original_object_key
+            FROM media_objects
+            WHERE contribution_id = ?
+            """,
+            String.class,
+            contributionId
+    );
+
+    s3Client.putObject(
+            PutObjectRequest.builder()
+                    .bucket(BUCKET)
+                    .key(objectKey)
+                    .contentType(contentType)
+                    .build(),
+            RequestBody.fromBytes(content)
+    );
+}
 
     private ResultActions initiateUpload(
             User user,

@@ -5,6 +5,7 @@ import com.after.backend.storage.ObjectStorageService;
 import com.after.backend.storage.PresignedDownload;
 import com.after.backend.storage.PresignedUpload;
 import com.after.backend.storage.config.StorageProperties;
+import com.after.backend.storage.ObjectMetadata;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -15,12 +16,14 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.Optional;
 
 @Service
 public class S3ObjectStorageService
@@ -182,40 +185,38 @@ public class S3ObjectStorageService
     }
 
     @Override
-    public boolean exists(
+    public boolean exists(String objectKey) {
+        return getMetadata(objectKey).isPresent();
+    }
+
+    @Override
+    public Optional<ObjectMetadata> getMetadata(
             String objectKey
     ) {
-        String key =
-                requireObjectKey(
-                        objectKey
-                );
+        String key = requireObjectKey(objectKey);
 
         try {
-            s3Client.headObject(
-                    HeadObjectRequest
-                            .builder()
-                            .bucket(
-                                    properties.bucket()
-                            )
-                            .key(
-                                    key
-                            )
+            HeadObjectResponse response = s3Client.headObject(
+                    HeadObjectRequest.builder()
+                            .bucket(properties.bucket())
+                            .key(key)
                             .build()
             );
 
-            return true;
-        } catch (
-                S3Exception exception
-        ) {
-            if (
-                    exception.statusCode()
-                            == 404
-            ) {
-                return false;
+            return Optional.of(
+                    new ObjectMetadata(
+                            response.contentLength(),
+                            response.contentType()
+                    )
+            );
+
+        } catch (S3Exception exception) {
+            if (exception.statusCode() == 404) {
+                return Optional.empty();
             }
 
             throw new ObjectStorageException(
-                    "Unable to check object existence",
+                    "Unable to read object metadata",
                     exception
             );
         }
