@@ -745,20 +745,16 @@ class MediaUploadApiIntegrationTest {
         HttpRequest uploadRequest =
                 HttpRequest
                         .newBuilder(
-                                URI.create(
-                                        uploadUrl
-                                )
+                                URI.create(uploadUrl)
                         )
+                        .version(HttpClient.Version.HTTP_1_1)
                         .header(
                                 "Content-Type",
                                 contentType
                         )
                         .PUT(
-                                HttpRequest
-                                        .BodyPublishers
-                                        .ofByteArray(
-                                                content
-                                        )
+                                HttpRequest.BodyPublishers
+                                        .ofByteArray(content)
                         )
                         .build();
 
