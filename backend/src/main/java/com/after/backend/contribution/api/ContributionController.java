@@ -6,6 +6,7 @@ import com.after.backend.contribution.api.dto.CreateMediaContributionRequest;
 import com.after.backend.contribution.api.dto.CreateTextContributionRequest;
 import com.after.backend.contribution.api.dto.MediaUploadResponse;
 import com.after.backend.contribution.api.dto.UpdateTextContributionRequest;
+import com.after.backend.contribution.api.dto.MediaCompletionResponse;
 import com.after.backend.contribution.application.ContributionService;
 import com.after.backend.user.domain.User;
 import jakarta.validation.Valid;
@@ -106,6 +107,28 @@ public class ContributionController {
         return ResponseEntity
                 .noContent()
                 .build();
+    }
+
+    @PostMapping("/{contributionId}/complete")
+    public ResponseEntity<MediaCompletionResponse> completeMediaUpload(
+             @PathVariable UUID capsuleId,
+             @PathVariable UUID contributionId,
+             @AuthenticationPrincipal Jwt jwt
+    ) {
+        User currentUser = authService.currentUser(
+                jwt.getSubject()
+        );
+
+        MediaCompletionResponse response = contributionService
+                .completeMediaUpload(
+                        currentUser,
+                        capsuleId,
+                        contributionId
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.ACCEPTED)
+                .body(response);
     }
 
     @PostMapping("/media")
