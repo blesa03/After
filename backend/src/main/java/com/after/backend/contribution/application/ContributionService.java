@@ -20,6 +20,8 @@ import com.after.backend.contribution.infrastructure.ContributionRepository;
 import com.after.backend.contribution.api.dto.MediaCompletionResponse;
 import com.after.backend.contribution.exception.InvalidUploadedObjectException;
 import com.after.backend.contribution.exception.MediaCompletionConflictException;
+import com.after.backend.processing.domain.MediaProcessingJob;
+import com.after.backend.processing.infrastructure.MediaProcessingJobRepository;
 import com.after.backend.storage.ObjectStorageService;
 import com.after.backend.storage.PresignedUpload;
 import com.after.backend.storage.ObjectMetadata;
@@ -46,11 +48,15 @@ public class ContributionService {
     private final MediaUploadPolicy
             mediaUploadPolicy;
 
+    private final MediaProcessingJobRepository
+            mediaProcessingJobRepository;
+
     public ContributionService(
             ContributionRepository contributionRepository,
             CapsuleMemberRepository capsuleMemberRepository,
             ObjectStorageService objectStorageService,
-            MediaUploadPolicy mediaUploadPolicy
+            MediaUploadPolicy mediaUploadPolicy,
+            MediaProcessingJobRepository mediaProcessingJobRepository
     ) {
         this.contributionRepository =
                 contributionRepository;
@@ -63,6 +69,9 @@ public class ContributionService {
 
         this.mediaUploadPolicy =
                 mediaUploadPolicy;
+
+        this.mediaProcessingJobRepository =
+                mediaProcessingJobRepository;
     }
 
     @Transactional
@@ -225,8 +234,12 @@ public class ContributionService {
             );
         }
 
-        // 9. Advance the upload lifecycle.
+        // 9. Advance the upload lifecycle and enqueue processing job.
         mediaObject.setStatus(MediaObjectStatus.PROCESSING);
+
+        mediaProcessingJobRepository.saveAndFlush(
+                new MediaProcessingJob(contribution)
+        );
 
         return new MediaCompletionResponse(
                 contribution.getId(),
