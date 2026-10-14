@@ -851,6 +851,9 @@ class MediaUploadApiIntegrationTest {
 
         assertThat(mediaStatus(contributionId))
                 .isEqualTo("PROCESSING");
+
+        assertThat(pendingJobCount(contributionId))
+                .isEqualTo(1);
     }
 
     @Test
@@ -874,6 +877,9 @@ class MediaUploadApiIntegrationTest {
 
         assertThat(mediaStatus(contributionId))
                 .isEqualTo("UPLOADING");
+
+        assertThat(pendingJobCount(contributionId))
+                .isZero();
     }
 
     @SuppressWarnings("deprecation")
@@ -905,6 +911,9 @@ class MediaUploadApiIntegrationTest {
 
         assertThat(mediaStatus(contributionId))
                 .isEqualTo("UPLOADING");
+
+        assertThat(pendingJobCount(contributionId))
+                .isZero();
     }
 
     @SuppressWarnings("deprecation")
@@ -936,6 +945,9 @@ class MediaUploadApiIntegrationTest {
 
         assertThat(mediaStatus(contributionId))
                 .isEqualTo("UPLOADING");
+
+        assertThat(pendingJobCount(contributionId))
+                .isZero();
     }
 
     @Test
@@ -972,6 +984,9 @@ class MediaUploadApiIntegrationTest {
 
         assertThat(mediaStatus(contributionId))
                 .isEqualTo("UPLOADING");
+
+        assertThat(pendingJobCount(contributionId))
+                .isZero();
     }
 
     @Test
@@ -997,6 +1012,9 @@ class MediaUploadApiIntegrationTest {
 
         assertThat(mediaStatus(contributionId))
                 .isEqualTo("UPLOADING");
+
+        assertThat(pendingJobCount(contributionId))
+                .isZero();
     }
 
     @Test
@@ -1031,6 +1049,9 @@ class MediaUploadApiIntegrationTest {
 
         assertThat(mediaStatus(contributionId))
                 .isEqualTo("UPLOADING");
+
+        assertThat(pendingJobCount(contributionId))
+                .isZero();
     }
 
     @Test
@@ -1071,6 +1092,9 @@ class MediaUploadApiIntegrationTest {
 
         assertThat(mediaStatus(contributionId))
                 .isEqualTo("UPLOADING");
+
+        assertThat(pendingJobCount(contributionId))
+                .isZero();
     }
 
     @Test
@@ -1107,6 +1131,9 @@ class MediaUploadApiIntegrationTest {
 
         assertThat(mediaStatus(contributionId))
                 .isEqualTo("PROCESSING");
+
+        assertThat(pendingJobCount(contributionId))
+                .isEqualTo(1);
     }
 
     @Test
@@ -1138,6 +1165,9 @@ class MediaUploadApiIntegrationTest {
                 contributionId
         )
                 .andExpect(status().isConflict());
+
+        assertThat(pendingJobCount(contributionId))
+                .isZero();
     }
 
     @Test
@@ -1179,84 +1209,104 @@ class MediaUploadApiIntegrationTest {
 
         assertThat(mediaStatus(contributionId))
                 .isEqualTo("PROCESSING");
+
+        assertThat(pendingJobCount(contributionId))
+                .isEqualTo(1);
     }
 
-// Test helpers
+    // Test helpers
 
-private ResultActions completeUpload(
-        User user,
-        UUID capsuleId,
-        UUID contributionId
-) throws Exception {
+    private ResultActions completeUpload(
+            User user,
+            UUID capsuleId,
+            UUID contributionId
+    ) throws Exception {
 
-    return mockMvc.perform(
-            post(
-                    "/api/capsules/{capsuleId}/contributions/{contributionId}/complete",
-                    capsuleId,
-                    contributionId
-            ).with(as(user))
-    );
-}
+        return mockMvc.perform(
+                post(
+                        "/api/capsules/{capsuleId}/contributions/{contributionId}/complete",
+                        capsuleId,
+                        contributionId
+                ).with(as(user))
+        );
+    }
 
-private UUID initiateImage(
-        User user,
-        UUID capsuleId
-) throws Exception {
+    private UUID initiateImage(
+            User user,
+            UUID capsuleId
+    ) throws Exception {
 
-    MvcResult result = initiateUpload(
-            user,
-            capsuleId,
-            "IMAGE",
-            "photo.jpg",
-            "image/jpeg",
-            4L
-    )
-            .andExpect(status().isCreated())
-            .andReturn();
+        MvcResult result = initiateUpload(
+                user,
+                capsuleId,
+                "IMAGE",
+                "photo.jpg",
+                "image/jpeg",
+                4L
+        )
+                .andExpect(status().isCreated())
+                .andReturn();
 
-    return UUID.fromString(
-            jsonField(result, "contributionId")
-    );
-}
+        return UUID.fromString(
+                jsonField(result, "contributionId")
+        );
+    }
 
-private String mediaStatus(UUID contributionId) {
+    private String mediaStatus(UUID contributionId) {
 
-    return jdbcTemplate.queryForObject(
-            """
-            SELECT status::text
-            FROM media_objects
-            WHERE contribution_id = ?
-            """,
-            String.class,
-            contributionId
-    );
-}
+        return jdbcTemplate.queryForObject(
+                """
+                SELECT status::text
+                FROM media_objects
+                WHERE contribution_id = ?
+                """,
+                String.class,
+                contributionId
+        );
+    }
 
-private void uploadStoredObject(
-        UUID contributionId,
-        String contentType,
-        byte[] content
-) {
+    private int pendingJobCount(UUID contributionId) {
 
-    String objectKey = jdbcTemplate.queryForObject(
-            """
-            SELECT original_object_key
-            FROM media_objects
-            WHERE contribution_id = ?
-            """,
-            String.class,
-            contributionId
-    );
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM media_processing_jobs
+                WHERE contribution_id = ?
+                  AND status = 'PENDING'::media_processing_job_status
+                  AND attempts = 0
+                """,
+                Integer.class,
+                contributionId
+        );
 
-    s3Client.putObject(
-            PutObjectRequest.builder()
-                    .bucket(BUCKET)
-                    .key(objectKey)
-                    .contentType(contentType)
-                    .build(),
-            RequestBody.fromBytes(content)
-    );
-}
+        return count == null ? 0 : count;
+    }
+
+    private void uploadStoredObject(
+            UUID contributionId,
+            String contentType,
+            byte[] content
+    ) {
+
+        String objectKey = jdbcTemplate.queryForObject(
+                """
+                SELECT original_object_key
+                FROM media_objects
+                WHERE contribution_id = ?
+                """,
+                String.class,
+                contributionId
+        );
+
+        s3Client.putObject(
+                PutObjectRequest.builder()
+                        .bucket(BUCKET)
+                        .key(objectKey)
+                        .contentType(contentType)
+                        .build(),
+                RequestBody.fromBytes(content)
+        );
+    }
 
     private ResultActions initiateUpload(
             User user,
