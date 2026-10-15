@@ -30,21 +30,22 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -104,7 +105,7 @@ class MediaUploadApiIntegrationTest {
                     .waitingFor(
                             Wait
                                     .forHttp(
-                                            "/minio/health/live"
+                                            "/minio/health/ready"
                                     )
                                     .forPort(
                                             9000
@@ -1298,14 +1299,30 @@ class MediaUploadApiIntegrationTest {
                 contributionId
         );
 
-        s3Client.putObject(
-                PutObjectRequest.builder()
-                        .bucket(BUCKET)
-                        .key(objectKey)
-                        .contentType(contentType)
-                        .build(),
-                RequestBody.fromBytes(content)
-        );
+        int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                s3Client.putObject(
+                        PutObjectRequest.builder()
+                                .bucket(BUCKET)
+                                .key(objectKey)
+                                .contentType(contentType)
+                                .build(),
+                        RequestBody.fromBytes(content)
+                );
+                return;
+            } catch (SdkClientException ex) {
+                if (attempt == maxAttempts) {
+                    throw ex;
+                }
+                try {
+                    Thread.sleep(150L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw ex;
+                }
+            }
+        }
     }
 
     private ResultActions initiateUpload(
@@ -1435,23 +1452,31 @@ class MediaUploadApiIntegrationTest {
     }
 
     private void ensureBucketExists() {
-        try {
-            s3Client.createBucket(
-                    CreateBucketRequest
-                            .builder()
-                            .bucket(
-                                    BUCKET
-                            )
-                            .build()
-            );
-        } catch (
-                S3Exception exception
-        ) {
-            if (
-                    exception.statusCode()
-                            != 409
-            ) {
+        int maxAttempts = 5;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                s3Client.createBucket(
+                        CreateBucketRequest
+                                .builder()
+                                .bucket(BUCKET)
+                                .build()
+                );
+                return;
+            } catch (S3Exception exception) {
+                if (exception.statusCode() == 409) {
+                    return;
+                }
                 throw exception;
+            } catch (SdkClientException clientException) {
+                if (attempt == maxAttempts) {
+                    throw clientException;
+                }
+                try {
+                    Thread.sleep(200L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw clientException;
+                }
             }
         }
     }
