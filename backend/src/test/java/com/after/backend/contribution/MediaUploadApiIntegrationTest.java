@@ -30,21 +30,23 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -104,7 +106,7 @@ class MediaUploadApiIntegrationTest {
                     .waitingFor(
                             Wait
                                     .forHttp(
-                                            "/minio/health/live"
+                                            "/minio/health/ready"
                                     )
                                     .forPort(
                                             9000
@@ -734,39 +736,12 @@ class MediaUploadApiIntegrationTest {
                         contributionId
                 );
 
-        byte[] content =
-                new byte[] {
-                        1,
-                        2,
-                        3,
-                        4
-                };
-
-        HttpRequest uploadRequest =
-                HttpRequest
-                        .newBuilder(
-                                URI.create(uploadUrl)
-                        )
-                        .version(HttpClient.Version.HTTP_1_1)
-                        .header(
-                                "Content-Type",
-                                contentType
-                        )
-                        .PUT(
-                                HttpRequest.BodyPublishers
-                                        .ofByteArray(content)
-                        )
-                        .build();
-
         HttpResponse<String> uploadResponse =
-                HttpClient
-                        .newHttpClient()
-                        .send(
-                                uploadRequest,
-                                HttpResponse
-                                        .BodyHandlers
-                                        .ofString()
-                        );
+                sendPresignedPutWithRetry(
+                        uploadUrl,
+                        contentType,
+                        new byte[]{1, 2, 3, 4}
+                );
 
         assertThat(
                 uploadResponse.statusCode()
@@ -776,14 +751,10 @@ class MediaUploadApiIntegrationTest {
         );
 
         assertThat(
-                objectStorageService.exists(
-                        objectKey
-                )
+                existsWithRetry(objectKey)
         ).isTrue();
 
-        objectStorageService.delete(
-                objectKey
-        );
+        deleteWithRetry(objectKey);
     }
 
     @Test
@@ -808,32 +779,16 @@ class MediaUploadApiIntegrationTest {
                 jsonField(initiated, "contributionId")
         );
 
-        // Upload directly to MinIO using the T17 contract.
-        HttpRequest request = HttpRequest.newBuilder(
-                        URI.create(jsonField(initiated, "uploadUrl"))
-                )
-                .header(
-                        "Content-Type",
-                        jsonHeader(initiated, "Content-Type")
-                )
-                .PUT(
-                        HttpRequest.BodyPublishers.ofByteArray(
-                                new byte[]{1, 2, 3, 4}
-                        )
-                )
-                .build();
-
-        HttpResponse<String> uploadResponse = HttpClient
-                .newHttpClient()
-                .send(
-                        request,
-                        HttpResponse.BodyHandlers.ofString()
+        HttpResponse<String> uploadResponse =
+                sendPresignedPutWithRetry(
+                        jsonField(initiated, "uploadUrl"),
+                        jsonHeader(initiated, "Content-Type"),
+                        new byte[]{1, 2, 3, 4}
                 );
 
         assertThat(uploadResponse.statusCode())
                 .isBetween(200, 299);
 
-        // Notify the backend after completing the PUT.
         completeUpload(
                 owner,
                 capsule.getId(),
@@ -895,7 +850,6 @@ class MediaUploadApiIntegrationTest {
                 capsule.getId()
         );
 
-        // The initiated upload declares 4 bytes.
         uploadStoredObject(
                 contributionId,
                 "image/jpeg",
@@ -929,7 +883,6 @@ class MediaUploadApiIntegrationTest {
                 capsule.getId()
         );
 
-        // The initiated upload declares image/jpeg.
         uploadStoredObject(
                 contributionId,
                 "image/png",
@@ -1216,19 +1169,115 @@ class MediaUploadApiIntegrationTest {
 
     // Test helpers
 
+    private HttpResponse<String> sendPresignedPutWithRetry(
+            String uploadUrl,
+            String contentType,
+            byte[] content
+    ) throws Exception {
+
+        int maxAttempts = 4;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                HttpClient client = HttpClient.newBuilder()
+                        .version(HttpClient.Version.HTTP_1_1)
+                        .connectTimeout(Duration.ofSeconds(10))
+                        .build();
+
+                HttpRequest request = HttpRequest.newBuilder(
+                                URI.create(uploadUrl)
+                        )
+                        .version(HttpClient.Version.HTTP_1_1)
+                        .header("Content-Type", contentType)
+                        .PUT(
+                                HttpRequest.BodyPublishers.ofByteArray(
+                                        content
+                                )
+                        )
+                        .build();
+
+                return client.send(
+                        request,
+                        HttpResponse.BodyHandlers.ofString()
+                );
+            } catch (IOException ex) {
+                if (attempt == maxAttempts) {
+                    throw ex;
+                }
+                Thread.sleep(200L * attempt);
+            }
+        }
+        throw new IllegalStateException("Unreachable");
+    }
+
+    private boolean existsWithRetry(String objectKey) throws InterruptedException {
+        int maxAttempts = 4;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return objectStorageService.exists(objectKey);
+            } catch (SdkClientException ex) {
+                if (attempt == maxAttempts) {
+                    throw ex;
+                }
+                Thread.sleep(200L * attempt);
+            }
+        }
+        return false;
+    }
+
+    private void deleteWithRetry(String objectKey) throws InterruptedException {
+        int maxAttempts = 4;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                objectStorageService.delete(objectKey);
+                return;
+            } catch (SdkClientException ex) {
+                if (attempt == maxAttempts) {
+                    throw ex;
+                }
+                Thread.sleep(200L * attempt);
+            }
+        }
+    }
+
     private ResultActions completeUpload(
             User user,
             UUID capsuleId,
             UUID contributionId
     ) throws Exception {
 
-        return mockMvc.perform(
-                post(
-                        "/api/capsules/{capsuleId}/contributions/{contributionId}/complete",
-                        capsuleId,
-                        contributionId
-                ).with(as(user))
-        );
+        int maxAttempts = 4;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return mockMvc.perform(
+                        post(
+                                "/api/capsules/{capsuleId}/contributions/{contributionId}/complete",
+                                capsuleId,
+                                contributionId
+                        ).with(as(user))
+                );
+            } catch (Exception ex) {
+                if (!hasCause(ex, SdkClientException.class)
+                        || attempt == maxAttempts) {
+                    throw ex;
+                }
+                Thread.sleep(200L * attempt);
+            }
+        }
+        throw new IllegalStateException("Unreachable");
+    }
+
+    private boolean hasCause(
+            Throwable throwable,
+            Class<? extends Throwable> target
+    ) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (target.isInstance(current)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private UUID initiateImage(
@@ -1298,14 +1347,30 @@ class MediaUploadApiIntegrationTest {
                 contributionId
         );
 
-        s3Client.putObject(
-                PutObjectRequest.builder()
-                        .bucket(BUCKET)
-                        .key(objectKey)
-                        .contentType(contentType)
-                        .build(),
-                RequestBody.fromBytes(content)
-        );
+        int maxAttempts = 4;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                s3Client.putObject(
+                        PutObjectRequest.builder()
+                                .bucket(BUCKET)
+                                .key(objectKey)
+                                .contentType(contentType)
+                                .build(),
+                        RequestBody.fromBytes(content)
+                );
+                return;
+            } catch (SdkClientException ex) {
+                if (attempt == maxAttempts) {
+                    throw ex;
+                }
+                try {
+                    Thread.sleep(200L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw ex;
+                }
+            }
+        }
     }
 
     private ResultActions initiateUpload(
@@ -1435,23 +1500,31 @@ class MediaUploadApiIntegrationTest {
     }
 
     private void ensureBucketExists() {
-        try {
-            s3Client.createBucket(
-                    CreateBucketRequest
-                            .builder()
-                            .bucket(
-                                    BUCKET
-                            )
-                            .build()
-            );
-        } catch (
-                S3Exception exception
-        ) {
-            if (
-                    exception.statusCode()
-                            != 409
-            ) {
+        int maxAttempts = 5;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                s3Client.createBucket(
+                        CreateBucketRequest
+                                .builder()
+                                .bucket(BUCKET)
+                                .build()
+                );
+                return;
+            } catch (S3Exception exception) {
+                if (exception.statusCode() == 409) {
+                    return;
+                }
                 throw exception;
+            } catch (SdkClientException clientException) {
+                if (attempt == maxAttempts) {
+                    throw clientException;
+                }
+                try {
+                    Thread.sleep(200L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw clientException;
+                }
             }
         }
     }
