@@ -8,22 +8,18 @@ public record ClaimedMediaProcessingJob(
         UUID id,
         UUID contributionId,
         int attempts,
-        Instant startedAt
+        Instant startedAt,
+        UUID claimToken
 ) {
-
     public ClaimedMediaProcessingJob {
-        Objects.requireNonNull(
-                id,
-                "id cannot be null"
-        );
+        Objects.requireNonNull(id, "id cannot be null");
         Objects.requireNonNull(
                 contributionId,
                 "contributionId cannot be null"
         );
-        Objects.requireNonNull(
-                startedAt,
-                "startedAt cannot be null"
-        );
+        Objects.requireNonNull(startedAt, "startedAt cannot be null");
+        Objects.requireNonNull(claimToken, "claimToken cannot be null");
+
         if (attempts <= 0) {
             throw new IllegalArgumentException(
                     "attempts must be greater than zero"
