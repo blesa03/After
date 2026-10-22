@@ -10,20 +10,16 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.services.s3.S3Client;
 
 @Testcontainers
-@SpringBootTest(
-        properties = {
-                "worker.polling.enabled=false"
-        }
-)
+@SpringBootTest(properties = {
+        "worker.polling.enabled=false",
+        "spring.flyway.enabled=false"
+})
 class MediaWorkerApplicationTests {
 
-    @SuppressWarnings("deprecation")
     @Container
     @ServiceConnection
     static final PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(
-                    "postgres:17-alpine"
-            );
+            new PostgreSQLContainer<>("postgres:17-alpine");
 
     @MockitoBean
     private S3Client s3Client;
@@ -31,5 +27,4 @@ class MediaWorkerApplicationTests {
     @Test
     void contextLoads() {
     }
-
 }

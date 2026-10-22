@@ -1,5 +1,6 @@
 package com.after.mediaworker.processing;
 
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,372 +14,527 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.services.s3.S3Client;
 
+import javax.sql.DataSource;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
-@SpringBootTest(
-        properties = {
-                "worker.polling.enabled=false"
-        }
-)
+@SpringBootTest(properties = {
+        "worker.polling.enabled=false",
+        "spring.flyway.enabled=false"
+})
 class MediaProcessingWorkerIntegrationTest {
 
-    @SuppressWarnings("deprecation")
     @Container
     @ServiceConnection
     static final PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(
-                    "postgres:17-alpine"
-            );
+            new PostgreSQLContainer<>("postgres:17-alpine");
 
     @MockitoBean
     private S3Client s3Client;
 
     @Autowired
-    private MediaProcessingJobQueueRepository
-            queueRepository;
+    private MediaProcessingJobQueueRepository queue;
 
     @Autowired
-    private MediaProcessingWorker
-            defaultWorker;
+    private MediaProcessingWorker applicationWorker;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private QueueProcessingPolicy policy;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @BeforeAll
-    static void initSchema(
-            @Autowired JdbcTemplate jdbcTemplate
-    ) {
-        jdbcTemplate.execute(
-                """
-                DO $$
-                BEGIN
-                    IF NOT EXISTS (
-                        SELECT 1
-                        FROM pg_type
-                        WHERE typname = 'media_processing_job_status'
-                    ) THEN
-                        CREATE TYPE media_processing_job_status AS ENUM (
-                            'PENDING',
-                            'PROCESSING',
-                            'COMPLETED',
-                            'FAILED'
-                        );
-                    END IF;
-                END
-                $$;
-                """
-        );
+    static void migrate(@Autowired DataSource dataSource) {
+        Path migrations = Path.of(
+                "..", "backend", "src", "main",
+                "resources", "db", "migration"
+        ).toAbsolutePath().normalize();
 
-        jdbcTemplate.execute(
-                """
-                CREATE TABLE IF NOT EXISTS media_processing_jobs (
-                    id UUID PRIMARY KEY,
-                    contribution_id UUID NOT NULL,
-                    status media_processing_job_status
-                        NOT NULL
-                        DEFAULT 'PENDING'::media_processing_job_status,
-                    attempts INTEGER NOT NULL DEFAULT 0,
-                    created_at TIMESTAMPTZ
-                        NOT NULL
-                        DEFAULT CURRENT_TIMESTAMP,
-                    started_at TIMESTAMPTZ,
-                    completed_at TIMESTAMPTZ,
-                    error TEXT,
-                    CONSTRAINT chk_media_processing_jobs_attempts
-                        CHECK (attempts >= 0)
-                )
-                """
-        );
+        assertThat(Files.isDirectory(migrations)).isTrue();
+
+        Flyway.configure()
+                .dataSource(dataSource)
+                .locations("filesystem:" + migrations)
+                .load()
+                .migrate();
     }
 
     @BeforeEach
-    void cleanQueue() {
-        jdbcTemplate.update(
-                "DELETE FROM media_processing_jobs"
-        );
+    void clean() {
+        jdbc.update("DELETE FROM media_processing_jobs");
+        jdbc.update("DELETE FROM contributions");
+        jdbc.update("DELETE FROM capsules");
+        jdbc.update("DELETE FROM users");
     }
 
     @Test
-    void shouldClaimProcessAndCompletePendingJob() {
-        UUID jobId = insertPendingJob();
+    void actualFlywaySchemaIncludesT19AndT21Migrations() {
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM flyway_schema_history
+                WHERE version IN ('7', '8')
+                  AND success = TRUE
+                """,
+                Integer.class
+        )).isEqualTo(2);
 
-        AtomicReference<String> statusDuringProcessing =
-                new AtomicReference<>();
-        AtomicReference<Integer> attemptsDuringProcessing =
-                new AtomicReference<>();
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_name = 'media_processing_jobs'
+                  AND column_name IN (
+                      'claim_token',
+                      'lease_expires_at',
+                      'next_attempt_at'
+                  )
+                """,
+                Integer.class
+        )).isEqualTo(3);
+    }
 
-        MediaProcessingWorker worker =
-                new MediaProcessingWorker(
-                        queueRepository,
-                        claimed -> {
-                            Map<String, Object> row =
-                                    jobRow(claimed.id());
-                            statusDuringProcessing.set(
-                                    (String) row.get("status")
-                            );
-                            attemptsDuringProcessing.set(
-                                    (Integer) row.get("attempts")
-                            );
-                        }
-                );
+    @Test
+    void claimsTransitionsAndCompletes() {
+        UUID id = insertPendingJob();
+
+        MediaProcessingWorker worker = worker(job -> {
+            Map<String, Object> during = row(job.id());
+
+            assertThat(during.get("status"))
+                    .isEqualTo("PROCESSING");
+
+            assertThat(during.get("attempts"))
+                    .isEqualTo(1);
+        });
 
         Optional<ClaimedMediaProcessingJob> processed =
                 worker.processNextAvailableJob();
 
         assertThat(processed).isPresent();
-        assertThat(processed.get().id()).isEqualTo(jobId);
-        assertThat(processed.get().attempts()).isEqualTo(1);
-        assertThat(processed.get().startedAt()).isNotNull();
+        assertThat(processed.get().id()).isEqualTo(id);
+        assertThat(processed.get().claimToken()).isNotNull();
 
-        assertThat(statusDuringProcessing.get())
-                .isEqualTo("PROCESSING");
-        assertThat(attemptsDuringProcessing.get())
-                .isEqualTo(1);
-
-        Map<String, Object> completedRow = jobRow(jobId);
-        assertThat(completedRow.get("status"))
+        assertThat(row(id).get("status"))
                 .isEqualTo("COMPLETED");
-        assertThat(completedRow.get("attempts"))
-                .isEqualTo(1);
-        assertThat(completedRow.get("started_at"))
-                .isNotNull();
-        assertThat(completedRow.get("completed_at"))
-                .isNotNull();
-        assertThat(completedRow.get("error"))
-                .isNull();
+
+        assertThat(row(id).get("error")).isNull();
+        assertThat(row(id).get("completed_at")).isNotNull();
     }
 
     @Test
-    void shouldMarkJobFailedWhenProcessingThrowsException() {
-        UUID jobId = insertPendingJob();
-
-        MediaProcessingWorker failingWorker =
-                new MediaProcessingWorker(
-                        queueRepository,
-                        claimed -> {
-                            throw new IllegalStateException(
-                                    "Simulated transcoding error"
-                            );
-                        }
-                );
-
-        Optional<ClaimedMediaProcessingJob> processed =
-                failingWorker.processNextAvailableJob();
-
-        assertThat(processed).isPresent();
-        assertThat(processed.get().id()).isEqualTo(jobId);
-
-        Map<String, Object> failedRow = jobRow(jobId);
-        assertThat(failedRow.get("status"))
-                .isEqualTo("FAILED");
-        assertThat(failedRow.get("attempts"))
-                .isEqualTo(1);
-        assertThat(failedRow.get("started_at"))
-                .isNotNull();
-        assertThat(failedRow.get("completed_at"))
-                .isNotNull();
-        assertThat(failedRow.get("error"))
-                .isEqualTo("Simulated transcoding error");
+    void emptyQueueDoesNotClaim() {
+        assertThat(worker(job -> {})
+                .processNextAvailableJob()).isEmpty();
     }
 
     @Test
-    void shouldReturnEmptyWhenNoPendingJobsExist() {
-        assertThat(defaultWorker.processNextAvailableJob())
+    void noopHandlerNeverConsumesPendingJob() {
+        UUID id = insertPendingJob();
+
+        assertThat(applicationWorker.isOperational()).isFalse();
+
+        assertThat(applicationWorker.processNextAvailableJob())
                 .isEmpty();
+
+        assertThat(row(id).get("status"))
+                .isEqualTo("PENDING");
+
+        assertThat(row(id).get("attempts"))
+                .isEqualTo(0);
     }
 
     @Test
-    void shouldNotClaimSameJobAcrossTwoConcurrentWorkers()
+    void nonRetryableFailureIsTerminal() {
+        UUID id = insertPendingJob();
+
+        worker(job -> {
+            throw new NonRetryableMediaProcessingException(
+                    "invalid media"
+            );
+        }).processNextAvailableJob();
+
+        assertThat(row(id).get("status"))
+                .isEqualTo("FAILED");
+
+        assertThat(row(id).get("attempts"))
+                .isEqualTo(1);
+
+        assertThat(row(id).get("error"))
+                .isEqualTo("invalid media");
+    }
+
+    @Test
+    void retryableFailuresStopAfterMaxAttempts() {
+        UUID id = insertPendingJob();
+
+        MediaProcessingWorker worker = worker(job -> {
+            throw new IllegalStateException("transient");
+        });
+
+        for (int attempt = 1;
+             attempt <= policy.maxAttempts();
+             attempt++) {
+
+            assertThat(worker.processNextAvailableJob())
+                    .isPresent();
+
+            assertThat(row(id).get("attempts"))
+                    .isEqualTo(attempt);
+
+            if (attempt < policy.maxAttempts()) {
+                assertThat(row(id).get("status"))
+                        .isEqualTo("PENDING");
+
+                assertThat(row(id).get("completed_at"))
+                        .isNull();
+
+                jdbc.update(
+                        """
+                        UPDATE media_processing_jobs
+                        SET next_attempt_at =
+                            CURRENT_TIMESTAMP - INTERVAL '1 second'
+                        WHERE id = ?
+                        """,
+                        id
+                );
+            }
+        }
+
+        assertThat(row(id).get("status"))
+                .isEqualTo("FAILED");
+
+        assertThat(row(id).get("completed_at"))
+                .isNotNull();
+    }
+
+    @Test
+    void backoffPreventsImmediateRedelivery() {
+        UUID id = insertPendingJob();
+
+        MediaProcessingWorker worker = worker(job -> {
+            throw new IllegalArgumentException("temporary");
+        });
+
+        worker.processNextAvailableJob();
+
+        assertThat(worker.processNextAvailableJob()).isEmpty();
+
+        assertThat(row(id).get("status"))
+                .isEqualTo("PENDING");
+
+        assertThat(row(id).get("attempts"))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void sameJobCannotBeClaimedWhileFirstHandlerIsActive()
             throws Exception {
 
-        UUID jobId = insertPendingJob();
+        UUID id = insertPendingJob();
 
-        MediaProcessingWorker workerOne =
-                new MediaProcessingWorker(
-                        queueRepository,
-                        claimed -> {}
-                );
+        CountDownLatch processing = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
 
-        MediaProcessingWorker workerTwo =
-                new MediaProcessingWorker(
-                        queueRepository,
-                        claimed -> {}
-                );
+        MediaProcessingWorker first = worker(job -> {
+            processing.countDown();
+
+            assertThat(release.await(15, TimeUnit.SECONDS))
+                    .isTrue();
+        });
+
+        MediaProcessingWorker second = worker(job -> {});
 
         ExecutorService executor =
-                Executors.newFixedThreadPool(2);
-
-        CountDownLatch ready = new CountDownLatch(2);
-        CountDownLatch start = new CountDownLatch(1);
-
-        Callable<Optional<ClaimedMediaProcessingJob>> callOne =
-                () -> {
-                    ready.countDown();
-                    if (!start.await(30, TimeUnit.SECONDS)) {
-                        throw new IllegalStateException(
-                                "Timed out waiting for concurrent start"
-                        );
-                    }
-                    return workerOne.processNextAvailableJob();
-                };
-
-        Callable<Optional<ClaimedMediaProcessingJob>> callTwo =
-                () -> {
-                    ready.countDown();
-                    if (!start.await(30, TimeUnit.SECONDS)) {
-                        throw new IllegalStateException(
-                                "Timed out waiting for concurrent start"
-                        );
-                    }
-                    return workerTwo.processNextAvailableJob();
-                };
+                Executors.newSingleThreadExecutor();
 
         try {
-            Future<Optional<ClaimedMediaProcessingJob>> futureOne =
-                    executor.submit(callOne);
-            Future<Optional<ClaimedMediaProcessingJob>> futureTwo =
-                    executor.submit(callTwo);
+            Future<Optional<ClaimedMediaProcessingJob>> future =
+                    executor.submit(first::processNextAvailableJob);
 
-            assertThat(
-                    ready.await(30, TimeUnit.SECONDS)
-            ).isTrue();
+            assertThat(processing.await(15, TimeUnit.SECONDS))
+                    .isTrue();
 
-            start.countDown();
+            assertThat(second.processNextAvailableJob())
+                    .isEmpty();
 
-            List<ClaimedMediaProcessingJob> claimedJobs =
-                    List.of(
-                                    futureOne.get(30, TimeUnit.SECONDS),
-                                    futureTwo.get(30, TimeUnit.SECONDS)
-                            )
-                            .stream()
-                            .flatMap(Optional::stream)
-                            .toList();
+            release.countDown();
 
-            assertThat(claimedJobs).hasSize(1);
-            assertThat(claimedJobs.get(0).id())
-                    .isEqualTo(jobId);
+            assertThat(future.get(15, TimeUnit.SECONDS))
+                    .isPresent();
 
-            Map<String, Object> finalRow = jobRow(jobId);
-            assertThat(finalRow.get("status"))
+            assertThat(row(id).get("status"))
                     .isEqualTo("COMPLETED");
-            assertThat(finalRow.get("attempts"))
+
+            assertThat(row(id).get("attempts"))
                     .isEqualTo(1);
         } finally {
-            start.countDown();
+            release.countDown();
             executor.shutdownNow();
         }
     }
 
     @Test
-    void shouldDistributeTwoPendingJobsAcrossTwoConcurrentWorkersWithoutOverlap()
+    void twoWorkersCanOwnDistinctJobsInParallel()
             throws Exception {
 
-        UUID firstJobId = insertPendingJob();
-        UUID secondJobId = insertPendingJob();
+        UUID a = insertPendingJob();
+        UUID b = insertPendingJob();
 
-        CountDownLatch bothClaimed = new CountDownLatch(2);
+        CountDownLatch bothProcessing = new CountDownLatch(2);
 
-        MediaProcessingTaskHandler barrierHandler =
-                claimed -> {
-                    bothClaimed.countDown();
-                    if (!bothClaimed.await(30, TimeUnit.SECONDS)) {
-                        throw new IllegalStateException(
-                                "Second worker did not claim concurrently"
-                        );
-                    }
-                };
+        MediaProcessingTaskHandler handler = job -> {
+            bothProcessing.countDown();
 
-        MediaProcessingWorker workerOne =
-                new MediaProcessingWorker(
-                        queueRepository,
-                        barrierHandler
-                );
-
-        MediaProcessingWorker workerTwo =
-                new MediaProcessingWorker(
-                        queueRepository,
-                        barrierHandler
-                );
+            assertThat(
+                    bothProcessing.await(15, TimeUnit.SECONDS)
+            ).isTrue();
+        };
 
         ExecutorService executor =
                 Executors.newFixedThreadPool(2);
 
         try {
-            Future<Optional<ClaimedMediaProcessingJob>> futureOne =
+            Future<Optional<ClaimedMediaProcessingJob>> f1 =
                     executor.submit(
-                            workerOne::processNextAvailableJob
-                    );
-            Future<Optional<ClaimedMediaProcessingJob>> futureTwo =
-                    executor.submit(
-                            workerTwo::processNextAvailableJob
+                            worker(handler)::processNextAvailableJob
                     );
 
-            ClaimedMediaProcessingJob claimedOne =
-                    futureOne.get(30, TimeUnit.SECONDS)
-                            .orElseThrow();
-            ClaimedMediaProcessingJob claimedTwo =
-                    futureTwo.get(30, TimeUnit.SECONDS)
-                            .orElseThrow();
+            Future<Optional<ClaimedMediaProcessingJob>> f2 =
+                    executor.submit(
+                            worker(handler)::processNextAvailableJob
+                    );
 
-            assertThat(claimedOne.id())
-                    .isNotEqualTo(claimedTwo.id());
-            assertThat(
-                    List.of(claimedOne.id(), claimedTwo.id())
-            ).containsExactlyInAnyOrder(
-                    firstJobId,
-                    secondJobId
+            List<UUID> ids = List.of(
+                    f1.get(15, TimeUnit.SECONDS)
+                            .orElseThrow().id(),
+                    f2.get(15, TimeUnit.SECONDS)
+                            .orElseThrow().id()
             );
 
-            assertThat(jobRow(firstJobId).get("status"))
+            assertThat(ids)
+                    .containsExactlyInAnyOrder(a, b);
+
+            assertThat(row(a).get("status"))
                     .isEqualTo("COMPLETED");
-            assertThat(jobRow(secondJobId).get("status"))
+
+            assertThat(row(b).get("status"))
                     .isEqualTo("COMPLETED");
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void leaseExpiryRecoversJobAndRejectsOriginalOwner() {
+        UUID id = insertPendingJob();
+
+        ClaimedMediaProcessingJob first =
+                queue.claimNextPending(
+                        policy.leaseDuration()
+                ).orElseThrow();
+
+        assertThat(queue.renewLease(
+                first,
+                policy.leaseDuration()
+        )).isTrue();
+
+        assertThat(queue.recoverExpired(
+                policy.maxAttempts(),
+                Duration.ofSeconds(1),
+                100
+        )).isZero();
+
+        jdbc.update(
+                """
+                UPDATE media_processing_jobs
+                SET lease_expires_at =
+                    CURRENT_TIMESTAMP - INTERVAL '1 second'
+                WHERE id = ?
+                """,
+                id
+        );
+
+        assertThat(queue.recoverExpired(
+                policy.maxAttempts(),
+                Duration.ofSeconds(1),
+                100
+        )).isEqualTo(1);
+
+        assertThat(row(id).get("status"))
+                .isEqualTo("PENDING");
+
+        assertThat(queue.markCompleted(first))
+                .isFalse();
+
+        assertThat(queue.markFailed(
+                first,
+                "late",
+                false,
+                Duration.ZERO
+        )).isFalse();
+
+        jdbc.update(
+                """
+                UPDATE media_processing_jobs
+                SET next_attempt_at =
+                    CURRENT_TIMESTAMP - INTERVAL '1 second'
+                WHERE id = ?
+                """,
+                id
+        );
+
+        ClaimedMediaProcessingJob second =
+                queue.claimNextPending(
+                        policy.leaseDuration()
+                ).orElseThrow();
+
+        assertThat(second.claimToken())
+                .isNotEqualTo(first.claimToken());
+
+        assertThat(queue.markCompleted(second))
+                .isTrue();
+
+        assertThat(row(id).get("attempts"))
+                .isEqualTo(2);
+
+        assertThat(row(id).get("status"))
+                .isEqualTo("COMPLETED");
+    }
+
+    @Test
+    void recoveryStopsRetryingWhenBudgetIsExhausted() {
+        UUID id = insertPendingJob();
+
+        jdbc.update(
+                """
+                UPDATE media_processing_jobs
+                SET
+                    status = 'PROCESSING',
+                    attempts = ?,
+                    lease_expires_at =
+                        CURRENT_TIMESTAMP - INTERVAL '1 second',
+                    claim_token = ?
+                WHERE id = ?
+                """,
+                policy.maxAttempts(),
+                UUID.randomUUID(),
+                id
+        );
+
+        assertThat(queue.recoverExpired(
+                policy.maxAttempts(),
+                Duration.ofSeconds(1),
+                100
+        )).isEqualTo(1);
+
+        assertThat(row(id).get("status"))
+                .isEqualTo("FAILED");
+
+        assertThat(row(id).get("completed_at"))
+                .isNotNull();
+    }
+
+    @Test
+    void disabledPollingHasNoSchedulerBean(
+            @Autowired org.springframework.context.ApplicationContext context
+    ) {
+        assertThat(
+                context.getBeansOfType(MediaWorkerScheduler.class)
+        ).isEmpty();
+    }
+
+    private MediaProcessingWorker worker(
+            MediaProcessingTaskHandler handler
+    ) {
+        return new MediaProcessingWorker(
+                queue,
+                handler,
+                policy
+        );
     }
 
     private UUID insertPendingJob() {
-        UUID jobId = UUID.randomUUID();
-        UUID contributionId = UUID.randomUUID();
+        UUID user = UUID.randomUUID();
+        UUID capsule = UUID.randomUUID();
+        UUID contribution = UUID.randomUUID();
+        UUID job = UUID.randomUUID();
 
-        jdbcTemplate.update(
+        jdbc.update(
                 """
-                INSERT INTO media_processing_jobs (
-                    id,
-                    contribution_id,
-                    status,
-                    attempts
+                INSERT INTO users(
+                    id, email, password_hash,
+                    created_at, updated_at
                 )
-                VALUES (
-                    ?,
-                    ?,
-                    'PENDING'::media_processing_job_status,
-                    0
-                )
+                VALUES (?, ?, 'hash',
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """,
-                jobId,
-                contributionId
+                user,
+                "worker-test-" + user + "@example.com"
         );
 
-        return jobId;
+        jdbc.update(
+                """
+                INSERT INTO capsules(
+                    id, title, type, status, opens_at, timezone,
+                    created_at, updated_at
+                )
+                VALUES (
+                    ?, 'Worker test', 'PERSONAL', 'COLLECTING',
+                    CURRENT_TIMESTAMP + INTERVAL '1 day',
+                    'Europe/Madrid',
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                """,
+                capsule
+        );
+
+        jdbc.update(
+                """
+                INSERT INTO contributions(
+                    id, capsule_id, author_user_id, type,
+                    created_at, updated_at
+                )
+                VALUES (
+                    ?, ?, ?, 'IMAGE',
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                """,
+                contribution,
+                capsule,
+                user
+        );
+
+        jdbc.update(
+                """
+                INSERT INTO media_processing_jobs(
+                    id, contribution_id
+                )
+                VALUES (?, ?)
+                """,
+                job,
+                contribution
+        );
+
+        return job;
     }
 
-    private Map<String, Object> jobRow(UUID jobId) {
-        return jdbcTemplate.queryForMap(
+    private Map<String, Object> row(UUID jobId) {
+        return jdbc.queryForMap(
                 """
                 SELECT
                     status::text AS status,
