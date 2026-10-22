@@ -37,7 +37,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 class MediaProcessingWorkerIntegrationTest {
 
-    @SuppressWarnings("deprecation")
     @Container
     @ServiceConnection
     static final PostgreSQLContainer<?> postgres =
